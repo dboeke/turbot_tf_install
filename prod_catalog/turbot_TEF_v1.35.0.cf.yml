@@ -1,0 +1,5042 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: Turbot Enterprise Foundation 1.35.0
+
+Metadata:
+
+  AWS::CloudFormation::Interface:
+
+    ParameterGroups:
+
+      - Label:
+          default: Installation
+        Parameters:
+          - InstallationDomain
+          - TurbotCertificateArn
+          - ManagedRoute53
+          - RegionCode
+          - LicenseKey
+
+      - Label:
+          default: Logging
+        Parameters:
+          - LogBucketName
+          - ProcessLogBucketName
+          - LogRetentionDays
+          - ProcessLogRetentionInDays
+          - ModInstallDataRetentionDays
+          - AuditTrailRetentionDays
+
+      - Label:
+          default: Network - This Region [Option A - Created in this Stack]
+        Parameters:
+          - PublicSubnet1Cidr
+          - PublicSubnet2Cidr
+          - PublicSubnet3Cidr
+          - TurbotSubnet1Cidr
+          - TurbotSubnet2Cidr
+          - TurbotSubnet3Cidr
+          - DatabaseSubnet1Cidr
+          - DatabaseSubnet2Cidr
+          - DatabaseSubnet3Cidr
+          - NatGatewayHighAvailability
+          - VpcEndpointToAwsServices
+
+      - Label:
+          default: Network - This Region [Option B - Predefined]
+        Parameters:
+          - PredefinedVpcId
+          - PredefinedPublicSubnetIds
+          - PredefinedTurbotSubnetIds
+          - PredefinedDatabaseSubnetIds
+
+      - Label:
+          default: Network - Multi-Region Configuration
+        Parameters:
+          - VpcAlphaRegion
+          - VpcAlphaCidr
+          - VpcBetaRegion
+          - VpcBetaCidr
+          - VpcGammaRegion
+          - VpcGammaCidr
+
+      - Label:
+          default: Network - Alpha Region Specific
+        Parameters:
+          - VpcBetaId
+          - VpcGammaId
+
+      - Label:
+          default: Network - Beta Region Specific
+        Parameters:
+          - VpcPeeringAlphaToBetaId
+          - VpcGammaId
+
+      - Label:
+          default: Network - Gamma Region Specific
+        Parameters:
+          - VpcPeeringAlphaToGammaId
+          - VpcPeeringBetaToGammaId
+
+      - Label:
+          default: Network - Load Balancer
+        Parameters:
+          - LoadBalancerScheme
+          - InboundTrafficCidr
+          - CreateApiGateway
+
+      - Label:
+          default: Network - Proxy
+        Parameters:
+          - HttpProxy
+          - HttpsProxy
+          - NoProxy
+
+      - Label:
+          default: Network - Advanced
+        Parameters:
+          - UseSelfSignedCertificateInALB
+          - AllowSelfSignedCertificate
+
+      - Label:
+          default: Network - Security Groups
+        Parameters:
+          - CustomOutboundInternetSecurityGroup
+          - LdapServerCidr
+          - CustomLoadBalancerSecurityGroup
+          - CustomApiServiceSecurityGroup
+
+      - Label:
+          default: Advanced - ECS EC2 configuration
+        Parameters:
+          - InstanceType
+          - ECSAMI
+          - ECSMinInstanceCount
+          - ECSMaxInstanceCount
+          - AutoScalingTargetCPU
+
+      - Label:
+          default: Advanced - Scaling
+        Parameters:
+          - ApiDesiredScale
+          - ApiMinScaling
+          - ApiMaxScaling
+          - EventContainerDesiredScale
+          - EventContainerMinScaling
+          - EventContainerMaxScaling
+          - ApiEventsScaleUpThresholdValue
+          - ApiEventsScaleDownThresholdValue
+
+      - Label:
+          default: Advanced - Cache
+        Parameters:
+          - UseElastiCache
+
+      - Label:
+          default: Advanced - Lambda
+        Parameters:
+          - ModLambdaMaxMemory
+          - ModLambdaMaxTimeout
+
+      - Label:
+          default: Advanced - Worker
+        Parameters:
+          - WorkerLambdaReservedConcurrency
+          - WorkerLambdaMessageBatch
+          - WorkerLambdaMemorySize
+          - WorkerLambdaTimeout
+          - WorkerLambdaMaxDBConnections
+
+      - Label:
+          default: Advanced - Deployment
+        Parameters:
+          - ReleasePhase
+          - ResourceNamePrefix
+          - Flags
+          - OSGuardrails
+          - RoleCreationScheme
+          - TurbotParametersRoleArn
+          - S3BucketArnRoleArn
+          - ParameterDeploymentTrigger
+
+      - Label:
+          default: Advanced - Experimental
+        Parameters:
+          - DevelopmentMode
+          - ExperimentalFeatures
+
+    ParameterLabels:
+      # License
+      LicenseKey:
+        default: Turbot License Key
+
+      # Collective
+      InstallationDomain:
+        default: Installation Domain Name
+      TurbotCertificateArn:
+        default: Turbot Certificate ARN
+      ManagedRoute53:
+        default: Manage DNS records in Route 53
+
+      # Logging
+      LogBucketName:
+        default: Log Bucket Name
+
+      ProcessLogBucketName:
+        default: Process Log Bucket Name
+
+      LogRetentionDays:
+        default: Turbot Handler Log Retention Days
+
+      ProcessLogRetentionInDays:
+        default: Turbot Process Log Objects Retention Days
+
+      ModInstallDataRetentionDays:
+        default: Turbot Mod Installation Data Retention Days
+
+      AuditTrailRetentionDays:
+        default: Audit Trail log retention in days
+
+      # Advanced - Load Balancer
+      LoadBalancerScheme:
+        default: Scheme
+      InboundTrafficCidr:
+        default: CIDR for inbound access from Clients / Users
+      CreateApiGateway:
+        default: Create public API gateway
+
+      InstanceType:
+        default: Instance Type for EC2 ECS host
+      ECSAMI:
+        default: AMI type for EC2 ECS host
+      ECSMinInstanceCount:
+        default: ECS Instance Minimum Scale Count
+      ECSMaxInstanceCount:
+        default: ECS Instance Maximum Scale Count
+
+      # Scaling
+      AutoScalingTargetCPU:
+        default: Autoscaling target CPU utilisation
+      ApiDesiredScale:
+        default: API Container Desired Scale Size
+      ApiMinScaling:
+        default: API Container Minimum Scale Size
+      ApiMaxScaling:
+        default: API Container Maximum Scale Size
+      EventContainerDesiredScale:
+        default: Events Container Desired Scale Size
+      EventContainerMinScaling:
+        default: Events Container Minimum Scale Size
+      EventContainerMaxScaling:
+        default: Events Container Maximum Scale Size
+      ApiEventsScaleUpThresholdValue:
+        default: API & Events Container Memory Utilization Scale Up Threshold Percentage
+      ApiEventsScaleDownThresholdValue:
+        default: API & Events Container Memory Utilization Scale Down Threshold Percentage
+
+      # Multi-Region
+      VpcAlphaRegion:
+        default: Alpha - Region
+      VpcAlphaCidr:
+        default: Alpha - CIDR
+      VpcBetaRegion:
+        default: Beta - Region
+      VpcBetaCidr:
+        default: Beta - CIDR
+      VpcGammaRegion:
+        default: Gamma - Region
+      VpcGammaCidr:
+        default: Gamma - CIDR
+
+      # Predefined Network
+      PredefinedVpcId:
+        default: VPC
+      PredefinedPublicSubnetIds:
+        default: Load Balancer Subnets
+      PredefinedTurbotSubnetIds:
+        default: Application (Turbot) Subnets
+      PredefinedDatabaseSubnetIds:
+        default: Database Subnets
+
+      # Current region
+      RegionCode:
+        default: Region Code
+      PublicSubnet1Cidr:
+        default: "Public Subnet CIDR #1"
+      PublicSubnet2Cidr:
+        default: "Public Subnet CIDR #2"
+      PublicSubnet3Cidr:
+        default: "Public Subnet CIDR #3"
+      TurbotSubnet1Cidr:
+        default: "Turbot Subnet CIDR #1"
+      TurbotSubnet2Cidr:
+        default: "Turbot Subnet CIDR #2"
+      TurbotSubnet3Cidr:
+        default: "Turbot Subnet CIDR #3"
+      DatabaseSubnet1Cidr:
+        default: "Database Subnet CIDR #1"
+      DatabaseSubnet2Cidr:
+        default: "Database Subnet CIDR #2"
+      DatabaseSubnet3Cidr:
+        default: "Database Subnet CIDR #3"
+
+      # Alpha configuration
+      VpcBetaId:
+        default: Beta - VPC ID
+      VpcGammaId:
+        default: Gamma - VPC ID
+
+      # Beta configuration
+      VpcPeeringAlphaToBetaId:
+        default: Peering Alpha to Beta - Connection ID
+
+      # Gamma configuration
+      VpcPeeringAlphaToGammaId:
+        default: Peering Alpha to Gamma - Connection ID
+      VpcPeeringBetaToGammaId:
+        default: Peering Beta to Gamma - Connection ID
+
+      # Proxy
+      HttpProxy:
+        default: HTTP_PROXY
+      HttpsProxy:
+        default: HTTPS_PROXY
+      NoProxy:
+        default: NO_PROXY
+
+      # Network - Advanced
+      UseSelfSignedCertificateInALB:
+        default: Self-Signed Certificate In ALB
+
+      AllowSelfSignedCertificate:
+        default: Allow Self-Signed Certificate
+
+      # Network
+      NatGatewayHighAvailability:
+        default: NAT Gateway High Availability
+
+      VpcEndpointToAwsServices:
+        default: VPC Endpoint to AWS Services
+
+      # Egress Rules
+
+      CustomOutboundInternetSecurityGroup:
+        default: "Custom Outbound Security Group ID"
+      LdapServerCidr:
+        default: CIDR for LDAP Server
+      CustomLoadBalancerSecurityGroup:
+        default: "Custom load balancer Security Group ID"
+      CustomApiServiceSecurityGroup:
+        default: "Custom API Service Security Group"
+
+      # OS Guardrails
+
+      OSGuardrails:
+        default: OS Guardrails
+
+      # Lambda
+
+      ModLambdaMaxMemory:
+        default: Maximum memory limit for Mod Lambda function
+      ModLambdaMaxTimeout:
+        default: Maximum timeout limit (in seconds) for Mod Lambda function
+
+      # Worker
+
+      WorkerLambdaReservedConcurrency:
+        default: Reserved Concurrency for Worker Lambda
+      WorkerLambdaMessageBatch:
+        default: Message Batch for Worker Lambda
+      WorkerLambdaMemorySize:
+        default: Memory Size for Worker Lambda
+      WorkerLambdaTimeout:
+        default: Timeout for Worker Lambda
+      WorkerLambdaMaxDBConnections:
+        default: Maximum DB Connections for Worker Lambda
+
+      # Deployment
+      ReleasePhase:
+        default: Release Phase
+      ResourceNamePrefix:
+        default: Resource Name Prefix
+      Flags:
+        default: Flags
+      RoleCreationScheme:
+        default: Role Creation Scheme
+      TurbotParametersRoleArn:
+        default: Turbot Parameters Role
+      S3BucketArnRoleArn:
+        default: S3 Bucket Arn Role
+      ParameterDeploymentTrigger:
+        default: Parameter Deployment Trigger
+      DevelopmentMode:
+        default: Turn on Development Mode
+      ExperimentalFeatures:
+        default: Turn on Experimental Features
+      UseElastiCache:
+        default: ElastiCache
+
+Parameters:
+
+  InstanceType:
+    Description: The EC2 instance type. Turbot recommends instance size t3.medium or larger.
+    Type: String
+    Default: t3.medium
+    AllowedValues:
+      - t3.nano
+      - t3.micro
+      - t3.small
+      - t3.medium
+      - t3.large
+      - t3.xlarge
+      - t3.2xlarge
+      - t3a.nano
+      - t3a.micro
+      - t3a.small
+      - t3a.medium
+      - t3a.large
+      - t3a.xlarge
+      - t3a.2xlarge
+      - t2.nano
+      - t2.micro
+      - t2.small
+      - t2.medium
+      - t2.large
+      - t2.xlarge
+      - t2.2xlarge
+      - m5.large
+      - m5.xlarge
+      - m5.2xlarge
+      - m5.4xlarge
+      - m5.8xlarge
+      - m5.12xlarge
+      - m5.16xlarge
+      - m5.24xlarge
+      - m5.metal
+      - m5d.large
+      - m5d.xlarge
+      - m5d.2xlarge
+      - m5d.4xlarge
+      - m5d.8xlarge
+      - m5d.12xlarge
+      - m5d.16xlarge
+      - m5d.24xlarge
+      - m5d.metal
+      - m5a.large
+      - m5a.xlarge
+      - m5a.2xlarge
+      - m5a.4xlarge
+      - m5a.8xlarge
+      - m5a.12xlarge
+      - m5a.16xlarge
+      - m5a.24xlarge
+      - m5ad.large
+      - m5ad.xlarge
+      - m5ad.2xlarge
+      - m5ad.4xlarge
+      - m5ad.8xlarge
+      - m5ad.12xlarge
+      - m5ad.16xlarge
+      - m5ad.24xlarge
+      - m5n.large
+      - m5n.xlarge
+      - m5n.2xlarge
+      - m5n.4xlarge
+      - m5n.8xlarge
+      - m5n.12xlarge
+      - m5n.16xlarge
+      - m5n.24xlarge
+      - m5dn.large
+      - m5dn.xlarge
+      - m5dn.2xlarge
+      - m5dn.4xlarge
+      - m5dn.8xlarge
+      - m5dn.12xlarge
+      - m5dn.16xlarge
+      - m5dn.24xlarge
+      - m4.large
+      - m4.xlarge
+      - m4.2xlarge
+      - m4.4xlarge
+      - m4.10xlarge
+      - m4.16xlarge
+      - a1.medium
+      - a1.large
+      - a1.xlarge
+      - a1.2xlarge
+      - a1.4xlarge
+      - a1.metal
+      - c5.large
+      - c5.xlarge
+      - c5.2xlarge
+      - c5.4xlarge
+      - c5.9xlarge
+      - c5.12xlarge
+      - c5.18xlarge
+      - c5.24xlarge
+      - c5.metal
+      - c5d.large
+      - c5d.xlarge
+      - c5d.2xlarge
+      - c5d.4xlarge
+      - c5d.9xlarge
+      - c5d.12xlarge
+      - c5d.18xlarge
+      - c5d.24xlarge
+      - c5d.metal
+      - c5a.large
+      - c5a.xlarge
+      - c5a.2xlarge
+      - c5a.4xlarge
+      - c5a.8xlarge
+      - c5a.12xlarge
+      - c5a.16xlarge
+      - c5a.24xlarge
+      - c5n.large
+      - c5n.metal
+      - c5n.xlarge
+      - c5n.2xlarge
+      - c5n.4xlarge
+      - c5n.9xlarge
+      - c5n.18xlarge
+      - c4.large
+      - c4.xlarge
+      - c4.2xlarge
+      - c4.4xlarge
+      - c4.8xlarge
+      - r5.large
+      - r5.xlarge
+      - r5.2xlarge
+      - r5.4xlarge
+      - r5.8xlarge
+      - r5.12xlarge
+      - r5.16xlarge
+      - r5.24xlarge
+      - r5.metal
+      - r5d.large
+      - r5d.xlarge
+      - r5d.2xlarge
+      - r5d.4xlarge
+      - r5d.8xlarge
+      - r5d.12xlarge
+      - r5d.16xlarge
+      - r5d.24xlarge
+      - r5d.metal
+      - r5a.large
+      - r5a.xlarge
+      - r5a.2xlarge
+      - r5a.4xlarge
+      - r5a.8xlarge
+      - r5a.12xlarge
+      - r5a.16xlarge
+      - r5a.24xlarge
+      - r5ad.large
+      - r5ad.xlarge
+      - r5ad.2xlarge
+      - r5ad.4xlarge
+      - r5ad.8xlarge
+      - r5ad.12xlarge
+      - r5ad.16xlarge
+      - r5ad.24xlarge
+      - r5n.large
+      - r5n.xlarge
+      - r5n.2xlarge
+      - r5n.4xlarge
+      - r5n.8xlarge
+      - r5n.12xlarge
+      - r5n.16xlarge
+      - r5n.24xlarge
+      - r5dn.large
+      - r5dn.xlarge
+      - r5dn.2xlarge
+      - r5dn.4xlarge
+      - r5dn.8xlarge
+      - r5dn.12xlarge
+      - r5dn.16xlarge
+      - r5dn.24xlarge
+      - r4.large
+      - r4.xlarge
+      - r4.2xlarge
+      - r4.4xlarge
+      - r4.8xlarge
+      - r4.16xlarge
+      - x1.16xlarge
+      - x1.32xlarge
+      - x1e.xlarge
+      - x1e.2xlarge
+      - x1e.4xlarge
+      - x1e.8xlarge
+      - x1e.16xlarge
+      - x1e.32xlarge
+      - z1d.large
+      - z1d.xlarge
+      - z1d.2xlarge
+      - z1d.3xlarge
+      - z1d.6xlarge
+      - z1d.12xlarge
+      - z1d.metal
+      - p3.2xlarge
+      - p3.8xlarge
+      - p3.16xlarge
+      - p2.xlarge
+      - p2.8xlarge
+      - p2.16xlarge
+      - g4dn.xlarge
+      - g4dn.2xlarge
+      - g4dn.4xlarge
+      - g4dn.8xlarge
+      - g4dn.12xlarge
+      - g4dn.16xlarge
+      - g3.4xlarge
+      - g3.8xlarge
+      - g3.16xlarge
+      - i3.large
+      - i3.xlarge
+      - i3.2xlarge
+      - i3.4xlarge
+      - i3.8xlarge
+      - i3.16xlarge
+      - i3en.large
+      - i3en.xlarge
+      - i3en.2xlarge
+      - i3en.3xlarge
+      - i3en.6xlarge
+      - i3en.12xlarge
+      - i3en.24xlarge
+      - i3en.metal
+      - d2.xlarge
+      - d2.2xlarge
+      - d2.4xlarge
+      - d2.8xlarge
+    ConstraintDescription: must be a valid EC2 instance type.
+
+  ECSAMI:
+    Description: ECS Optimised AMI ID. https://docs.aws.amazon.com/AmazonECS/latest/developerguide/ecs-optimized_AMI.html
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: "/aws/service/ecs/optimized-ami/amazon-linux-2/recommended/image_id"
+
+  ECSMinInstanceCount:
+    Description: Min instance count for ECS Cluster
+    Type: Number
+    Default: 1
+
+  ECSMaxInstanceCount:
+    Description: Max instance count for ECS Cluster
+    Type: Number
+    Default: 8
+
+  #
+  # Installation (Collective) information
+  #
+
+  LicenseKey:
+    Description: |
+      License Key for Turbot installation.
+    Type: String
+    AllowedPattern: "^(?:|-----BEGIN TURBOT LICENSE-----\\s*([A-Za-z0-9-._]+(?:[\\r\\n]+[A-Za-z0-9-._]+)*)\\s*-----END TURBOT LICENSE-----)$"
+
+  InstallationDomain:
+    Description: |
+      Base domain name for the installation. For example,
+      turbot.mycompany.com. Workspaces will be setup as subdomains of the
+      InstallationDomain in the formation
+      <workspace>.<InstallationDomain>. For example,
+      dev.turbot.mycompany.com.
+    Type: String
+    AllowedPattern: "^[-a-z0-9\\.]+$"
+
+  TurbotCertificateArn:
+    Description: |
+      ARN of an ACM certificate to be used in this region.  This must be a certificate
+      with a name that matches the Installation Domain Name.  If using wildcards, the certificate should include the
+      Installation Domain Name and a wildcard.  Else, the certificate should contain entries for the Installation Domain
+      Name, all planned workspaces and any public API gateways.
+    Type: String
+    AllowedPattern: "^arn:aws(-us-gov|-cn)?:acm:.*$"
+
+  ManagedRoute53:
+    Description: |
+      If enabled, a version alias domain records will be created using Route 53
+      for the Installation Domain zone. Set to Disabled if
+      using a custom DNS approach to versions.
+    Default: Enabled
+    Type: String
+    AllowedValues:
+      - Enabled
+      - Disabled
+
+
+  #
+  # Logging
+  #
+  LogBucketName:
+    Description: Name for the log bucket. Dynamic appends a semi-random string on the log bucket name.
+    Type: String
+    Default: "dynamic"
+    AllowedValues:
+      - constant
+      - dynamic
+
+  ProcessLogBucketName:
+    Description: Name for the process log bucket. Dynamic appends a semi-random string on the log bucket name.
+    Type: String
+    Default: "dynamic"
+    AllowedValues:
+      - constant
+      - dynamic
+
+  LogRetentionDays:
+    Description: Days to retain logs for API and worker processing.
+    Type: Number
+    Default: 180
+    AllowedValues:
+      - 1
+      - 3
+      - 5
+      - 7
+      - 14
+      - 30
+      - 60
+      - 90
+      - 120
+      - 150
+      - 180
+      - 365
+      - 400
+      - 545
+      - 731
+      - 1827
+      - 3653
+
+  ProcessLogRetentionInDays:
+    Description: Days to retain Turbot Process Logs stored in the TEF's Process Log bucket.
+    Type: Number
+    Default: 395
+
+  ModInstallDataRetentionDays:
+    Description: Days to retain Mod data used by Mod installation using the Turbot CLI
+    Type: Number
+    Default: 90
+    AllowedValues:
+      - 1
+      - 3
+      - 5
+      - 7
+      - 14
+      - 30
+      - 60
+      - 90
+      - 120
+      - 150
+      - 180
+      - 365
+      - 400
+      - 545
+      - 731
+      - 1827
+      - 3653
+
+  AuditTrailRetentionDays:
+    Description: |
+      Days to retain audit trail logs for all workspaces in a hive.
+    Type: String
+    Default: 365
+    AllowedValues:
+      - ""
+      - 1
+      - 3
+      - 5
+      - 7
+      - 14
+      - 30
+      - 60
+      - 90
+      - 120
+      - 150
+      - 180
+      - 365
+      - 400
+      - 545
+      - 731
+      - 1827
+      - 3653
+
+  #
+  # Multi-region
+  #
+
+  VpcAlphaRegion:
+    Description: Region for the "alpha" VPC.
+    Type: String
+    Default: ""
+    AllowedValues:
+      - ap-northeast-1
+      - ap-northeast-2
+      - ap-northeast-3
+      - ap-south-1
+      - ap-southeast-1
+      - ap-southeast-2
+      - ca-central-1
+      - cn-north-1
+      - cn-northwest-1
+      - eu-central-1
+      - eu-north-1
+      - eu-west-1
+      - eu-west-2
+      - eu-west-3
+      - sa-east-1
+      - us-east-1
+      - us-east-2
+      - us-west-1
+      - us-west-2
+      - us-gov-west-1
+      - us-gov-east-1
+      - ""
+
+  VpcAlphaCidr:
+    Description: CIDR for the "alpha" VPC.
+    Type: String
+    Default: "10.84.0.0/16"
+    AllowedPattern: "^([0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+/[0-9]+)?$"
+
+  VpcBetaRegion:
+    Description: Region for the "beta" VPC.
+    Type: String
+    Default: ""
+    AllowedValues:
+      - ap-northeast-1
+      - ap-northeast-2
+      - ap-northeast-3
+      - ap-south-1
+      - ap-southeast-1
+      - ap-southeast-2
+      - ca-central-1
+      - cn-north-1
+      - cn-northwest-1
+      - eu-central-1
+      - eu-north-1
+      - eu-west-1
+      - eu-west-2
+      - eu-west-3
+      - sa-east-1
+      - us-east-1
+      - us-east-2
+      - us-west-1
+      - us-west-2
+      - ""
+
+  VpcBetaCidr:
+    Description: CIDR for the "beta" VPC.
+    Type: String
+    Default: "10.85.0.0/16"
+    AllowedPattern: "^([0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+/[0-9]+)?$"
+
+  VpcGammaRegion:
+    Description: Region for the "gamma" VPC.
+    Type: String
+    Default: ""
+    AllowedValues:
+      - ap-northeast-1
+      - ap-northeast-2
+      - ap-northeast-3
+      - ap-south-1
+      - ap-southeast-1
+      - ap-southeast-2
+      - ca-central-1
+      - cn-north-1
+      - cn-northwest-1
+      - eu-central-1
+      - eu-north-1
+      - eu-west-1
+      - eu-west-2
+      - eu-west-3
+      - sa-east-1
+      - us-east-1
+      - us-east-2
+      - us-west-1
+      - us-west-2
+      - ""
+
+  VpcGammaCidr:
+    Description: CIDR for the "gamma" VPC.
+    Type: String
+    Default: "10.86.0.0/16"
+    AllowedPattern: "^([0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+/[0-9]+)?$"
+
+
+  #
+  # Current region
+  #
+
+  PredefinedVpcId:
+    Description: |
+      Predefined VPC that will be used to host Turbot. If empty, then a new VPC
+      will be deployed by this stack.
+    Type: String
+    Default: ""
+    AllowedPattern: "^(vpc-[a-z0-9]+)?$"
+
+  PredefinedDatabaseSubnetIds:
+    Description: |
+      Predefined database subnets where the databases will be deployed. Defined as
+      a comma separated list of subnet IDs. If you have selected a pre-defined VPC,
+      you MUST specify Database Subnet IDs here.
+    Type: CommaDelimitedList
+    Default: ""
+
+  PredefinedTurbotSubnetIds:
+    Description: |
+      Predefined public subnets where the Turbot Containers and private
+      lambda functions (workspace manager Lambda) will be deployed. Defined as
+      a comma separated list of subnet IDs. If you have selected a pre-defined VPC,
+      you MUST specify Application (Turbot) Subnet IDs here.
+    Type: CommaDelimitedList
+    Default: ""
+
+  PredefinedPublicSubnetIds:
+    Description: |
+      Predefined subnets where the load balancers will be deployed.
+
+      May be public facing or internal facing. These can be identical to the Application Subnet IDs.
+
+      The majority of enterprise clusters will have their load balancers running in the
+      internal facing subnets. However to maintain consistency with Turbot created VPC this CloudFormation
+      Resource is called Public Subnet IDs.
+
+      Defined asa comma separated list of subnet IDs. If you have selected a pre-defined VPC,
+      you MUST specify Load Balancer Subnet Ids here.
+    Type: CommaDelimitedList
+    Default: ""
+
+  #
+  # Current region
+  #
+
+  RegionCode:
+    Description: >
+      Unique code for this region in the multi-region setup - please ensure
+      each region is different! Up to 3 regions may be configured separately:
+      alpha, beta and gamma. No one region is more important than the others
+      since work is evenly distributed and even the primary database may
+      failover between them. Each region must be given a different node
+      identifier from this list, allowing the stacks to be automatically
+      coordinated for peering etc.
+    Type: String
+    Default: alpha
+    AllowedValues:
+      - alpha
+      - beta
+      - gamma
+
+  PublicSubnet1Cidr:
+    Description: >
+      CIDR of the 1st load balancer subnet. If empty, the subnet will not be created.
+    Type: String
+    Default: 10.84.0.0/20
+    AllowedPattern: "^([0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+/[0-9]+)?$"
+
+  PublicSubnet2Cidr:
+    Description: >
+      CIDR of the 2nd load balancer subnet. If empty, the subnet will not be created.
+    Type: String
+    Default: 10.84.48.0/20
+    AllowedPattern: "^([0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+/[0-9]+)?$"
+
+  PublicSubnet3Cidr:
+    Description: >
+      CIDR of the 3rd load balancer subnet. If empty, the subnet will not be created.
+    Type: String
+    Default: 10.84.96.0/20
+    AllowedPattern: "^([0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+/[0-9]+)?$"
+
+  TurbotSubnet1Cidr:
+    Description: >
+      CIDR of the 1st application subnet. If empty, the subnet will not be created.
+    Type: String
+    Default: 10.84.16.0/20
+    AllowedPattern: "^([0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+/[0-9]+)?$"
+
+  TurbotSubnet2Cidr:
+    Description: >
+      CIDR of the 2nd application subnet. If empty, the subnet will not be created.
+    Type: String
+    Default: 10.84.64.0/20
+    AllowedPattern: "^([0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+/[0-9]+)?$"
+
+  TurbotSubnet3Cidr:
+    Description: >
+      CIDR of the 3rd application subnet. If empty, the subnet will not be created.
+    Type: String
+    Default: 10.84.112.0/20
+    AllowedPattern: "^([0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+/[0-9]+)?$"
+
+  DatabaseSubnet1Cidr:
+    Description: >
+      CIDR of the 1st database subnet. If empty, the subnet will not be created.
+    Type: String
+    Default: 10.84.32.0/20
+    AllowedPattern: "^([0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+/[0-9]+)?$"
+
+  DatabaseSubnet2Cidr:
+    Description: >
+      CIDR of the 2nd database subnet. If empty, the subnet will not be created.
+    Type: String
+    Default: 10.84.80.0/20
+    AllowedPattern: "^([0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+/[0-9]+)?$"
+
+  DatabaseSubnet3Cidr:
+    Description: >
+      CIDR of the 3rd database subnet. If empty, the subnet will not be created.
+    Type: String
+    Default: 10.84.128.0/20
+    AllowedPattern: "^([0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+/[0-9]+)?$"
+
+
+  #
+  # Alpha configuration
+  #
+
+  VpcBetaId:
+    Description: VPC ID for the "beta" VPC. Not required if this is the "beta" region.
+    Type: String
+    Default: ""
+    AllowedPattern: "^(vpc-[a-z0-9]+)?$"
+
+  VpcGammaId:
+    Description: VPC ID for the "gamma" VPC. Not required if this is the "gamma" region.
+    Type: String
+    Default: ""
+    AllowedPattern: "^(vpc-[a-z0-9]+)?$"
+
+
+  #
+  # Beta configuration
+  #
+
+  VpcPeeringAlphaToBetaId:
+    Description: Peering Connection ID for the "alpha" VPC to "beta" VPC peering connection. Not required if this is the "alpha" region.
+    Type: String
+    Default: ""
+    AllowedPattern: "^(pcx-[a-z0-9]+)?$"
+
+
+  #
+  # Gamma configuration
+  #
+
+  VpcPeeringAlphaToGammaId:
+    Description: Peering Connection ID for the "alpha" VPC to "gamma" VPC peering connection. Not required if this is the "alpha" region.
+    Type: String
+    Default: ""
+    AllowedPattern: "^(pcx-[a-z0-9]+)?$"
+
+  VpcPeeringBetaToGammaId:
+    Description: Peering Connection ID for the "beta" VPC to "gamma" VPC peering connection. Not required if this is the "beta" region.
+    Type: String
+    Default: ""
+    AllowedPattern: "^(pcx-[a-z0-9]+)?$"
+
+
+  #
+  # Proxy
+  #
+
+  HttpProxy:
+    Description: >
+      HTTP_PROXY configuration used by the Turbot application containers for
+      HTTP requests, e.g. https://internal.proxy.com:2011 or
+      http://internal.proxy.com:2011. Default is null (no proxy). Note:
+      controls and calculated policies running in Lambda functions do not use
+      the proxy configuration since they are outside the VPC.
+    Type: String
+    Default: "null"
+
+  HttpsProxy:
+    Description: >
+      HTTPS_PROXY configuration used by the Turbot application containers for
+      HTTPS requests, e.g. https://internal.proxy.com:2011 or
+      http://internal.proxy.com:2011. Default is null (no proxy). Note:
+      controls and calculated policies running in Lambda functions do not use
+      the proxy configuration since they are outside the VPC.
+    Type: String
+    Default: "null"
+
+  NoProxy:
+    Description: >
+      NO_PROXY configuration used by the Turbot application containers as
+      exceptions to the HTTPS_PROXY and HTTP_PROXY settings, e.g.
+      169.254.169.254,169.254.170.2,localhost	. Set this to 'null' if you do not
+      wish to use a NO_PROXY configuration.
+      Note: controls and calculated policies running
+      in Lambda functions do not use the proxy configuration since they are
+      outside the VPC.
+      Note: The Javascript AWS SDK does not support sending some services through a proxy and not others.
+      Access to AWS service endpoints must all go through the proxy or none.
+    Type: String
+    Default: "169.254.169.254,169.254.170.2,localhost"
+
+  UseSelfSignedCertificateInALB:
+    Description: >
+      If set to "true", NODE_TLS_REJECT_UNAUTHORIZED environment variable will
+      be set to 0 for Event Proxy Lambda to allow connection to ALB with self
+      signed certificate.
+    Type: String
+    Default: "false"
+    AllowedValues:
+      - "true"
+      - "false"
+
+  AllowSelfSignedCertificate:
+    Description: >
+      If set to "true", NODE_TLS_REJECT_UNAUTHORIZED environment variable will
+      be set to 0 for Turbot workers, API containers and all other Lambda
+      functions. Useful in networking environments that leverage a
+      (self-signed) proxy server for outbound internet access.
+    Type: String
+    Default: "false"
+    AllowedValues:
+      - "true"
+      - "false"
+
+  #
+  # Network
+  #
+
+  NatGatewayHighAvailability:
+    Description: >
+      If true, then NAT Gateways will be deployed in each availability zone,
+      ensuring resilience against failure in a single zone. If false, a
+      NAT Gateway will be established in the first AZ only and shared by other
+      AZs. High availability is recommended for production installations, but
+      may be set to false to reduce running costs in development or
+      non-critical environments.
+    Type: String
+    Default: Multi-AZ
+    AllowedValues:
+      - Multi-AZ
+      - Single-AZ
+
+  #
+  # Deployment
+  #
+
+  ReleasePhase:
+    Description: >
+      DO NOT MODIFY. Portfolio lifecycle phase for deployment. Defines the
+      artifacts to be used for this deployment.
+    Type: String
+    AllowedValues:
+      - development
+      - staging
+      - production
+    Default: production
+
+  ResourceNamePrefix:
+    Description: >
+      Prefix to be added to all Turbot resources. The suffix added in resource
+      creation starts with a - or _, e.g. {prefix}_resource_detail. The prefix
+      is restricted to  9 or fewer simple alphanumeric characters due to differences between
+      valid names in different services.
+      IT IS HIGHLY RECOMMENDED THAT YOU USE THE DEFAULT VALUE!
+    Type: String
+    Default: turbot
+    MaxLength: 9
+    AllowedPattern: "^[a-z][a-z0-9]*$"
+
+  Flags:
+    Description: >
+      Comma separated string to enable/disable enterprise features.
+      IT IS HIGHLY RECOMMENDED THAT YOU USE THE DEFAULT VALUE! This parameter shouldn't
+      be blank. Update to the default value of NONE, in case you need to clear this.
+    Type: String
+    Default: NONE
+    AllowedPattern: "^(?:([A-Z_]+)(?:,|$))+$"
+
+  RoleCreationScheme:
+    Description: >
+      Allow TEF to create IAM Roles.
+    Type: String
+    AllowedValues:
+      - All
+      - None
+    Default: All
+
+  TurbotParametersRoleArn:
+    Description: >
+      Role for Turbot Parameter custom resource. Leave empty for Turbot to create the Custom Resource parameter.
+      Specify the full ARN.
+      If this role is specified, Turbot will not create the role and will use the given role.
+    Type: String
+    Default: ""
+
+  S3BucketArnRoleArn:
+    Description: >
+      Role for S3 Bucket Arn List custom resource. Leave empty for Turbot to create the Custom Resource parameter.
+      Specify the full ARN.
+      If this role is specified, Turbot will not create the role and will use the given role.
+    Type: String
+    Default: ""
+
+  ParameterDeploymentTrigger:
+    Description: >
+      Changes to SSM parameter overrides (e.g. IAM role ARNs) are not automatically detected by CloudFormation.
+      Upgrades will recalculate the parameters, but if you wish to refresh you parameters without upgrading you can toggle this parameter.
+      Simply changing it is enough to force the parameters to be re-read and recalculated.
+    Type: String
+    Default: Blue
+    AllowedValues:
+      - Blue
+      - Green
+
+  #
+  # Advanced - Cluster Scaling
+  #
+  AutoScalingTargetCPU:
+    Description: Target CPU Utilization for ECS EC2 instances in Turbot Autoscaling Group
+    Type: Number
+    Default: 50
+  ApiDesiredScale:
+    Description: The number of simultaneous API tasks that you want to run on the cluster.
+    Type: Number
+    Default: 2
+  ApiMinScaling:
+    Description: The minimum value that API Container Auto Scaling can use to scale a target during a scaling activity
+    Type: Number
+    Default: 2
+  ApiMaxScaling:
+    Description: The maximum value that API Container Auto Scaling can use to scale a target during a scaling activity.
+    Type: Number
+    Default: 4
+  EventContainerDesiredScale:
+    Description: The number of simultaneous Events tasks that you want to run on the cluster.
+    Type: Number
+    Default: 2
+  EventContainerMinScaling:
+    Description: The minimum value that Event Container Auto Scaling can use to scale a target during a scaling activity
+    Type: Number
+    Default: 2
+  EventContainerMaxScaling:
+    Description: The maximum value that Event Container Auto Scaling can use to scale a target during a scaling activity.
+    Type: Number
+    Default: 4
+  ApiEventsScaleUpThresholdValue:
+    Description: The maximum threshold percentage of Api and Event Container Memory Utilization beyond which the containers will be scaled up.
+    Type: Number
+    Default: 70
+  ApiEventsScaleDownThresholdValue:
+    Description: The maximum threshold percentage of Api and Event Container Memory Utilization below which the containers will be scaled down.
+    Type: Number
+    Default: 30
+
+  #
+  # Advanced - Load Balancer
+  #
+
+  LoadBalancerScheme:
+    Description: |
+      Determines if the load balancer is internal or internet facing. If
+      internet-facing then the load balancer subnets must be "public". Otherwise,
+      the subnets should be "turbot".
+    Type: String
+    Default: internet-facing
+    AllowedValues:
+      - internet-facing
+      - internal
+
+  InboundTrafficCidr:
+    Description: >
+      CIDR range for inbound traffic to the Turbot load balancer (i.e. end
+      users). Typically 0.0.0.0/0, but may be updated for environments with
+      limited access requirements.
+    Type: String
+    Default: 0.0.0.0/0
+    AllowedPattern: "^[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+/[0-9]+$"
+
+  CreateApiGateway:
+    Description: |
+      Determines whether to create a public api gateway to forward events to Turbot.
+      This is normally required if you choose to create an internal load balancer.
+    Type: String
+    Default: Disabled
+    AllowedValues:
+      - Enabled
+      - Disabled
+
+  VpcEndpointToAwsServices:
+    Description: |
+      Determines whether to use VPC Endpoint for S3 connection. In existing installation,
+      creation of VPC Endpoint will cause temporary network disturbance. Currently running work may fail
+      and will be retried accordingly. Choose “VPC Endpoint” for new installation.
+      When Default is selected, S3 traffic will go through the default VPC setting.
+    Type: String
+    Default: "Default"
+    AllowedValues:
+      - "VPC Endpoint"
+      - "Default"
+
+  #
+  # Advanced - Network
+  #
+
+  CustomOutboundInternetSecurityGroup:
+    Type: String
+    Description:  |
+      A security group rule to be added to the Egress Rules for all turbot
+      containers and VPC lambda functions.
+
+      If you use an http proxy, you will need to add an egress rule to allow the
+      containers to access it. You
+
+      may also need outbound access for other infrastructure services, such as
+      dns.
+
+      NOTE - For new deployments, if using TEF 1.35.0 or later, if you don't provide custom security group for Predefined VPC, Turbot will create one for you, for previous versions, Turbot won't.
+
+  LdapServerCidr:
+    Type: String
+    Default: ""
+    AllowedPattern: "^([0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+/[0-9]+)?$"
+    Description:  |
+      If LDAP flag is enabled, specify here the LDAP Server CIDR block to allow connection to through port 636 and 389. Else leave this blank.
+
+  CustomLoadBalancerSecurityGroup:
+    Type: String
+    Description:  |
+      A custom load balancer Security Group id that has ingress rules for accessing the turbot application.
+      NOTE - For new deployments, if using TEF 1.35.0 or later, if you don't provide custom security group for Predefined VPC, Turbot will create one for you, for previous versions, Turbot won't.
+
+  CustomApiServiceSecurityGroup:
+    Type: String
+    Description: |
+      A custom Api service Security Group id that has restricted outbound access and inbound access to load balancer.
+      NOTE - For new deployments, if using TEF 1.35.0 or later, if you don't provide custom security group for Predefined VPC, Turbot will create one for you, for previous versions, Turbot won't.
+
+  #
+  # Advance - OS Guardrails
+  #
+
+  OSGuardrails:
+    Description: OS Guardrails
+    Type: String
+    Default: "off"
+    AllowedValues:
+      - "ansible"
+      - "off"
+
+  #
+  # Advanced - Lambda
+  #
+
+  ModLambdaMaxMemory:
+    Description: Maximum memory limit for Lambda functions to be created during Mod installation.
+    Type: Number
+    Default: 2048
+
+  ModLambdaMaxTimeout:
+    Description: Maximum timeout limit (in seconds) for Lambda functions to be created during mod installation.
+    Type: Number
+    Default: 300
+
+  #
+  # Advanced - Worker
+  #
+
+  WorkerLambdaReservedConcurrency:
+    Description: |
+      Maximum parallel invocation for Worker Lambda function. This is the Lambda function to process messages from the event queue.
+    Type: Number
+    Default: 30
+
+  WorkerLambdaMaxDBConnections:
+    Description: |
+      Maximum DB connections per Worker Lambda function. The higher the connections the quicker Postgres will max out the connections, but too low settings
+      will increase the chances of timeouts in acquiring the connections.
+    Type: Number
+    Default: 4
+
+  WorkerLambdaMessageBatch:
+    Description: |
+      Maximum of number of messages per batch. SQS deliver messages in a batch to the Worker Lambda function, this parameter
+      controls how many message per batch.
+    Type: Number
+    Default: 4
+
+  WorkerLambdaMemorySize:
+    Type: Number
+    Default: 3008
+
+  WorkerLambdaTimeout:
+    Description: |
+      Worker Lambda timeout. In seconds.
+    Type: Number
+    Default: 450
+
+  DevelopmentMode:
+    Description: Turn on development mode
+    Type: String
+    Default: "false"
+    AllowedValues:
+      - "true"
+      - "false"
+
+  ExperimentalFeatures:
+    Description: Turn on experimental features
+    Type: String
+    Default: "false"
+    AllowedValues:
+      - "true"
+      - "false"
+
+
+  UseElastiCache:
+    Description: >
+      Use ElastiCache. NOTE: if you are turning on ElastiCache post TEF 1.31.0, you must also flip
+      the Parameter Deployment Trigger to refresh TEF configuration.
+
+    Type: String
+    Default: "true"
+    AllowedValues:
+      - "true"
+      - "false"
+
+Conditions:
+
+  IsDevelopmentMode: !Equals [!Ref DevelopmentMode, "true"]
+  UseElastiCache: !Equals [!Ref UseElastiCache, "true"]
+
+  IsUsEast1: !Equals [!Ref "AWS::Region", "us-east-1"]
+  IsGovCloud: !Equals [ !Ref "AWS::Partition", "aws-us-gov"]
+  HasLicenseKey: !Not [!Equals [ !Ref LicenseKey, "" ]]
+
+  CreateRoles: !Equals [!Ref RoleCreationScheme, "All"]
+  CreateTurbotParametersRole: !Equals [ !Ref TurbotParametersRoleArn, ""]
+  CreateS3BucketArnRole: !Equals [ !Ref S3BucketArnRoleArn, ""]
+
+  HasPredefinedVpc: !Not [!Equals [ !Ref PredefinedVpcId, "" ]]
+  CreateNetwork: !Not [ !Condition HasPredefinedVpc ]
+  LogRetentionDayOrDays: !Equals [ !Ref LogRetentionDays, "1" ]
+
+  UseCustomOutboundInternetSecurityGroup: !Not [!Equals [ !Ref CustomOutboundInternetSecurityGroup, "" ]]
+  UseCustomLoadBalancerSecurityGroup: !Not [!Equals [ !Ref CustomLoadBalancerSecurityGroup, "" ]]
+  UseCustomApiServiceSecurityGroup: !Not [!Equals [ !Ref CustomApiServiceSecurityGroup, "" ]]
+
+  CreateOutboundInternetSecurityGroup: !Not [ !Condition UseCustomOutboundInternetSecurityGroup ]
+  CreateLoadBalancerSecurityGroup: !Not [ !Condition UseCustomLoadBalancerSecurityGroup ]
+  CreateApiServiceSecurityGroup: !Not [ !Condition UseCustomApiServiceSecurityGroup ]
+
+  HasPublicSubnet1: !And
+    - !Condition CreateNetwork
+    - !Not [ !Equals [ !Ref PublicSubnet1Cidr, "" ] ]
+  HasPublicSubnet2: !And
+    - !Condition CreateNetwork
+    - !Not [ !Equals [ !Ref PublicSubnet2Cidr, "" ] ]
+  HasPublicSubnet3: !And
+    - !Condition CreateNetwork
+    - !Not [ !Equals [ !Ref PublicSubnet3Cidr, "" ] ]
+  HasPublicSubnets: !Or
+    - !Condition HasPublicSubnet1
+    - !Condition HasPublicSubnet2
+    - !Condition HasPublicSubnet3
+
+  HasTurbotSubnet1: !And
+    - !Condition CreateNetwork
+    - !Not [ !Equals [ !Ref TurbotSubnet1Cidr, "" ] ]
+  HasTurbotSubnet2: !And
+    - !Condition CreateNetwork
+    - !Not [ !Equals [ !Ref TurbotSubnet2Cidr, "" ] ]
+  HasTurbotSubnet3: !And
+    - !Condition CreateNetwork
+    - !Not [ !Equals [ !Ref TurbotSubnet3Cidr, "" ] ]
+
+  HasDatabaseSubnet1: !And
+    - !Condition CreateNetwork
+    - !Not [ !Equals [ !Ref DatabaseSubnet1Cidr, "" ] ]
+  HasDatabaseSubnet2: !And
+    - !Condition CreateNetwork
+    - !Not [ !Equals [ !Ref DatabaseSubnet2Cidr, "" ] ]
+  HasDatabaseSubnet3: !And
+    - !Condition CreateNetwork
+    - !Not [ !Equals [ !Ref DatabaseSubnet3Cidr, "" ] ]
+  HasDatabaseSubnets: !Or
+    - !Condition HasDatabaseSubnet1
+    - !Condition HasDatabaseSubnet2
+    - !Condition HasDatabaseSubnet3
+
+  HasNatGateway1: !And
+    - !Condition HasTurbotSubnet1
+    - !Condition HasPublicSubnet1
+
+  HasNatGateway2: !And
+    - !Equals [ !Ref NatGatewayHighAvailability, "Multi-AZ" ]
+    - !Condition HasTurbotSubnet2
+    - !Condition HasPublicSubnet2
+
+  HasNatGateway3: !And
+    - !Equals [ !Ref NatGatewayHighAvailability, "Multi-AZ" ]
+    - !Condition HasTurbotSubnet3
+    - !Condition HasPublicSubnet3
+
+  IsAlpha: !Equals [ !Ref VpcAlphaRegion, !Ref "AWS::Region" ]
+
+  IsAlphaCreateRoles: !And
+    - !Condition IsAlpha
+    - !Condition CreateRoles
+
+  IsBeta:  !Equals [ !Ref VpcBetaRegion,  !Ref "AWS::Region" ]
+  IsGamma: !Equals [ !Ref VpcGammaRegion, !Ref "AWS::Region" ]
+
+  IsDynamicLogBucketName: !Equals [ !Ref LogBucketName, "dynamic" ]
+  IsDynamicProcessLogBucketName: !Equals [ !Ref ProcessLogBucketName, "dynamic" ]
+
+  HasAlpha: !And
+    - !Not [ !Equals [ !Ref VpcAlphaRegion, "" ] ]
+    - !Not [ !Equals [ !Ref VpcAlphaCidr, "" ] ]
+  HasBeta: !And
+    - !Not [ !Equals [ !Ref VpcBetaRegion, "" ] ]
+    - !Not [ !Equals [ !Ref VpcBetaCidr, "" ] ]
+  HasGamma: !And
+    - !Not [ !Equals [ !Ref VpcGammaRegion, "" ] ]
+    - !Not [ !Equals [ !Ref VpcGammaCidr, "" ] ]
+
+  PeerAlphaToBeta: !And
+    - !Condition CreateNetwork
+    - !Condition IsAlpha
+    - !Condition HasBeta
+    - !Not [ !Equals [ !Ref VpcBetaId, "" ] ]
+  PeerAlphaToGamma: !And
+    - !Condition CreateNetwork
+    - !Condition IsAlpha
+    - !Condition HasGamma
+    - !Not [ !Equals [ !Ref VpcGammaId, "" ] ]
+  PeerBetaToGamma: !And
+    - !Condition CreateNetwork
+    - !Condition IsBeta
+    - !Condition HasGamma
+    - !Not [ !Equals [ !Ref VpcGammaId, "" ] ]
+
+  RouteTurbotSubnet1AlphaToBeta: !And [ !Condition PeerAlphaToBeta, !Condition HasTurbotSubnet1 ]
+  RouteTurbotSubnet2AlphaToBeta: !And [ !Condition PeerAlphaToBeta, !Condition HasTurbotSubnet2 ]
+  RouteTurbotSubnet3AlphaToBeta: !And [ !Condition PeerAlphaToBeta, !Condition HasTurbotSubnet3 ]
+
+  RouteTurbotSubnet1AlphaToGamma: !And [ !Condition PeerAlphaToGamma, !Condition HasTurbotSubnet1 ]
+  RouteTurbotSubnet2AlphaToGamma: !And [ !Condition PeerAlphaToGamma, !Condition HasTurbotSubnet2 ]
+  RouteTurbotSubnet3AlphaToGamma: !And [ !Condition PeerAlphaToGamma, !Condition HasTurbotSubnet3 ]
+
+  RouteTurbotSubnet1BetaToAlpha: !And [ !Condition IsBeta, !Condition HasTurbotSubnet1, !Not [ !Equals [ !Ref VpcPeeringAlphaToBetaId, "" ] ] ]
+  RouteTurbotSubnet2BetaToAlpha: !And [ !Condition IsBeta, !Condition HasTurbotSubnet2, !Not [ !Equals [ !Ref VpcPeeringAlphaToBetaId, "" ] ] ]
+  RouteTurbotSubnet3BetaToAlpha: !And [ !Condition IsBeta, !Condition HasTurbotSubnet3, !Not [ !Equals [ !Ref VpcPeeringAlphaToBetaId, "" ] ] ]
+
+  RouteTurbotSubnet1BetaToGamma: !And [ !Condition PeerBetaToGamma, !Condition HasTurbotSubnet1 ]
+  RouteTurbotSubnet2BetaToGamma: !And [ !Condition PeerBetaToGamma, !Condition HasTurbotSubnet2 ]
+  RouteTurbotSubnet3BetaToGamma: !And [ !Condition PeerBetaToGamma, !Condition HasTurbotSubnet3 ]
+
+  RouteTurbotSubnet1GammaToAlpha: !And [ !Condition IsGamma, !Condition HasTurbotSubnet1, !Not [ !Equals [ !Ref VpcPeeringAlphaToGammaId, "" ] ] ]
+  RouteTurbotSubnet2GammaToAlpha: !And [ !Condition IsGamma, !Condition HasTurbotSubnet2, !Not [ !Equals [ !Ref VpcPeeringAlphaToGammaId, "" ] ] ]
+  RouteTurbotSubnet3GammaToAlpha: !And [ !Condition IsGamma, !Condition HasTurbotSubnet3, !Not [ !Equals [ !Ref VpcPeeringAlphaToGammaId, "" ] ] ]
+
+  RouteTurbotSubnet1GammaToBeta: !And [ !Condition IsGamma, !Condition HasTurbotSubnet1, !Not [ !Equals [ !Ref VpcPeeringBetaToGammaId, "" ] ] ]
+  RouteTurbotSubnet2GammaToBeta: !And [ !Condition IsGamma, !Condition HasTurbotSubnet2, !Not [ !Equals [ !Ref VpcPeeringBetaToGammaId, "" ] ] ]
+  RouteTurbotSubnet3GammaToBeta: !And [ !Condition IsGamma, !Condition HasTurbotSubnet3, !Not [ !Equals [ !Ref VpcPeeringBetaToGammaId, "" ] ] ]
+
+  RouteDatabaseSubnetsAlphaToBeta:  !And [ !Condition PeerAlphaToBeta, !Condition HasDatabaseSubnets ]
+  RouteDatabaseSubnetsAlphaToGamma: !And [ !Condition PeerAlphaToGamma, !Condition HasDatabaseSubnets ]
+  RouteDatabaseSubnetsBetaToAlpha:  !And [ !Condition IsBeta,  !Condition HasDatabaseSubnets, !Not [ !Equals [ !Ref VpcPeeringAlphaToBetaId, "" ] ] ]
+  RouteDatabaseSubnetsBetaToGamma:  !And [ !Condition PeerBetaToGamma,  !Condition HasDatabaseSubnets ]
+  RouteDatabaseSubnetsGammaToAlpha: !And [ !Condition IsGamma, !Condition HasDatabaseSubnets, !Not [ !Equals [ !Ref VpcPeeringAlphaToGammaId, "" ] ] ]
+  RouteDatabaseSubnetsGammaToBeta:  !And [ !Condition IsGamma, !Condition HasDatabaseSubnets, !Not [ !Equals [ !Ref VpcPeeringBetaToGammaId, "" ] ] ]
+
+  HasHttpProxy: !Not [!Equals [ !Ref HttpProxy, "null" ]]
+  HasHttpsProxy: !Not [!Equals [ !Ref HttpsProxy, "null" ]]
+  HasNoProxy: !Not [!Equals [ !Ref NoProxy, "null" ]]
+  UseSelfSignedCertificateInALB: !Equals [ !Ref UseSelfSignedCertificateInALB, "true" ]
+  AllowUseOfSelfSignedCertificate: !Equals [ !Ref AllowSelfSignedCertificate, "true" ]
+
+  ApiGatewayEnabled: !Equals [ !Ref CreateApiGateway, "Enabled" ]
+  ApiGatewayEnabledCreateRoles: !And
+    - !Condition ApiGatewayEnabled
+    - !Condition CreateRoles
+
+  ManageApiGatewayInRoute53: !And
+    - !Equals [ !Ref ManagedRoute53, "Enabled" ]
+    - !Condition ApiGatewayEnabled
+
+  CreateVpcEndpoint: !And
+    - !Condition CreateNetwork
+    - !Equals [ !Ref VpcEndpointToAwsServices, "VPC Endpoint" ]
+
+Mappings:
+
+  Constants:
+    Turbot:
+      EntityName: Turbot HQ Inc
+    Product:
+      Name: Turbot Enterprise Foundation
+      Version: 1.35.0
+    Portfolio:
+      AccountId: "054892787221"
+      GovCloudAccountId: "491412691920"
+
+  # Per https://docs.aws.amazon.com/elasticloadbalancing/latest/application/load-balancer-access-logs.html#access-logging-bucket-permissions
+  AlbAwsServiceAccount:
+    us-east-1:
+      AccountId: "127311923021"
+    us-east-2:
+      AccountId: "033677994240"
+    us-west-1:
+      AccountId: "027434742980"
+    us-west-2:
+      AccountId: "797873946194"
+    ca-central-1:
+      AccountId: "985666609251"
+    eu-central-1:
+      AccountId: "054676820928"
+    eu-west-1:
+      AccountId: "156460612806"
+    eu-west-2:
+      AccountId: "652711504416"
+    eu-west-3:
+      AccountId: "009996457667"
+    eu-north-1:
+      AccountId: "897822967062"
+    ap-northeast-1:
+      AccountId: "582318560864"
+    ap-northeast-2:
+      AccountId: "600734575887"
+    ap-northeast-3:
+      AccountId: "383597477331"
+    ap-southeast-1:
+      AccountId: "114774131450"
+    ap-southeast-2:
+      AccountId: "783225319266"
+    ap-south-1:
+      AccountId: "718504428378"
+    sa-east-1:
+      AccountId: "507241528517"
+    us-gov-west-1:
+      AccountId: "048591011584"
+    us-gov-east-1:
+      AccountId: "190560391635"
+    cn-north-1:
+      AccountId: "638102146993"
+    cn-northwest-1:
+      AccountId: "037604701340"
+
+
+Resources:
+
+  TEFVersionParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub "/${ResourceNamePrefix}/enterprise/tef_version"
+      Description: "TEF version"
+      Type: String
+      Value: !FindInMap [Constants, Product, Version]
+
+  FlagsParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub "/${ResourceNamePrefix}/enterprise/flags"
+      Description: "Feature Flags"
+      Type: String
+      Value: !Ref Flags
+
+  UseElastiCacheParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub "/${ResourceNamePrefix}/enterprise/use_elasticache"
+      Description: "Use Elasticache"
+      Type: String
+      Value: !Ref UseElastiCache
+
+  ModLambdaMaxMemoryParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub "/${ResourceNamePrefix}/enterprise/mod_lambda_max_memory"
+      Description: "Mod Lambda Maximum Memory Limit"
+      Type: String
+      Value: !Ref ModLambdaMaxMemory
+
+  ModLambdaMaxTimeoutParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub "/${ResourceNamePrefix}/enterprise/mod_lambda_max_timeout"
+      Description: "Mod Lambda Maximum Timeout Limit"
+      Type: String
+      Value: !Ref ModLambdaMaxTimeout
+
+  WorkerLambdaReservedConcurrencyParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub "/${ResourceNamePrefix}/enterprise/worker_lambda_reserved_concurrency"
+      Description: "Worker Lambda Reserved Concurrency"
+      Type: String
+      Value: !Ref WorkerLambdaReservedConcurrency
+
+  WorkerLambdaMessageBatchParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub "/${ResourceNamePrefix}/enterprise/worker_lambda_message_batch"
+      Description: "Worker Lambda Message Batch"
+      Type: String
+      Value: !Ref WorkerLambdaMessageBatch
+
+  WorkerLambdaMemorySizeParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub "/${ResourceNamePrefix}/enterprise/worker_lambda_memory_size"
+      Description: "Worker Lambda Memory Size"
+      Type: String
+      Value: !Ref WorkerLambdaMemorySize
+
+  WorkerLambdaTimeoutParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub "/${ResourceNamePrefix}/enterprise/worker_lambda_timeout"
+      Description: "Worker Lambda Timeout"
+      Type: String
+      Value: !Ref WorkerLambdaTimeout
+
+  WorkerLambdaMaxDBConnectionsParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub "/${ResourceNamePrefix}/enterprise/worker_lambda_max_db_connections"
+      Description: "Mod Lambda Maximum Database Connections"
+      Type: String
+      Value: !Ref WorkerLambdaMaxDBConnections
+
+  ExperimentalFeaturesParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub "/${ResourceNamePrefix}/enterprise/experimental_features"
+      Description: "Experimental Features"
+      Type: String
+      Value: !Ref ExperimentalFeatures
+
+  AllowSelfSignedCertificateParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub "/${ResourceNamePrefix}/enterprise/allow_self_signed_certificate"
+      Type: "String"
+      Value: !Ref AllowSelfSignedCertificate
+      Description: "Allow self-signed certificates when connecting to external services (e.g. through an enterprise proxy server)"
+
+  LicenseKeyParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub "/${ResourceNamePrefix}/enterprise/license_key"
+      Type: "String"
+      Value: !If
+        - HasLicenseKey
+        - !Ref LicenseKey
+        - "N/A"
+      Description: "The license key issued by for Turbot for this Enterprise installation"
+
+  LogBucketNameFormat:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub "/${ResourceNamePrefix}/enterprise/log_bucket_name_format"
+      Type: "String"
+      Value: !Ref LogBucketName
+
+  ProcessLogBucketNameFormat:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub "/${ResourceNamePrefix}/enterprise/process_log_bucket_name_format"
+      Type: "String"
+      Value: !Ref ProcessLogBucketName
+
+  #
+  # https://stackoverflow.com/questions/54897459/how-to-set-semi-random-name-for-s3-bucket-using-cloud-formation
+  #
+  DynamicBucketNameParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub "/${ResourceNamePrefix}/enterprise/dynamic_bucket_name"
+      Type: "String"
+      Value: !Select
+        - 0
+        - !Split
+          - "-"
+          - !Select
+            - 2
+            - !Split
+              - "/"
+              - !Ref "AWS::StackId"
+
+  LogBucketNameParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub "/${ResourceNamePrefix}/enterprise/log_bucket_name"
+      Type: "String"
+      Value: !If
+        - IsDynamicLogBucketName
+        - !Join
+          - "-"
+          - - !Ref ResourceNamePrefix
+            - !Ref "AWS::AccountId"
+            - !Ref "AWS::Region"
+            - !Select
+              - 0
+              - !Split
+                - "-"
+                - !Select
+                  - 2
+                  - !Split
+                    - "/"
+                    - !Ref "AWS::StackId"
+        - !Join [ "-", !Split [ "_", !Sub "${ResourceNamePrefix}_${AWS::AccountId}_${AWS::Region}" ] ]
+
+  ProcessLogBucketNameParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub "/${ResourceNamePrefix}/enterprise/process_log_bucket_name"
+      Type: "String"
+      Value: !If
+        - IsDynamicProcessLogBucketName
+        - !Join
+          - "-"
+          - - !Ref ResourceNamePrefix
+            - !Ref "AWS::AccountId"
+            - "process-logs"
+            - !Ref "AWS::Region"
+            - !Select
+              - 0
+              - !Split
+                - "-"
+                - !Select
+                  - 2
+                  - !Split
+                    - "/"
+                    - !Ref "AWS::StackId"
+        - !Join [ "-", !Split [ "_", !Sub "${ResourceNamePrefix}_${AWS::AccountId}_process_logs_${AWS::Region}" ] ]
+
+  AlphaRegionParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub "/${ResourceNamePrefix}/enterprise/alpha_region"
+      Type: "String"
+      Value: !If
+        - HasAlpha
+        - !Ref VpcAlphaRegion
+        - ""
+
+  # We need to do this because the limitation in Fn::Import
+  UseCustomLoadBalancerSecurityGroupParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub "/${ResourceNamePrefix}/enterprise/use_custom_load_balancer_security_group"
+      Type: "String"
+      Value: !If
+        - UseCustomLoadBalancerSecurityGroup
+        - "true"
+        - "false"
+      Description: "Indicate if Turbot should use a custom Load Balancer Security Group"
+
+  UseCustomApiServiceSecurityGroupParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub "/${ResourceNamePrefix}/enterprise/use_custom_api_service_security_group"
+      Type: "String"
+      Value: !If
+        - UseCustomApiServiceSecurityGroup
+        - "true"
+        - "false"
+      Description: "Indicate if Turbot should use a custom Api Service Security Group"
+
+  UseCustomOutboundInternetSecurityGroupParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub "/${ResourceNamePrefix}/enterprise/use_custom_outbound_internet_security_group"
+      Type: "String"
+      Value: !If
+        - UseCustomOutboundInternetSecurityGroup
+        - "true"
+        - "false"
+      Description: "Indicate if Turbot should use a custom Outbound Internet Security Group"
+
+  HttpProxyParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub "/${ResourceNamePrefix}/enterprise/http_proxy"
+      Type: "String"
+      Value: !Ref HttpProxy
+      Description: "Http Proxy for Turbot Enterprise Foundation / Turbot Enterprise"
+
+  HttpsProxyParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub "/${ResourceNamePrefix}/enterprise/https_proxy"
+      Type: "String"
+      Value: !Ref HttpsProxy
+      Description: "Https Proxy for Turbot Enterprise Foundation / Turbot Enterprise"
+
+  NoProxyParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub "/${ResourceNamePrefix}/enterprise/no_proxy"
+      Type: "String"
+      Value: !Ref NoProxy
+      Description: "No Proxy string for Turbot Enterprise Foundation / Turbot Enterprise"
+
+  TurbotKeyAliasParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub "/${ResourceNamePrefix}/enterprise/foundation_key_alias"
+      Type: "String"
+      Value: !Ref FoundationKeyAlias
+      Description: "KMS Key alias defined in Turbot Enterprise Foundation"
+
+  TransientKeyAliasParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub "/${ResourceNamePrefix}/enterprise/transient_key_alias"
+      Type: "String"
+      Value: !Ref TransientKeyAlias
+      Description: "KMS Transient Key alias defined in Turbot Enterprise Foundation"
+
+  TurbotLogBucketParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub "/${ResourceNamePrefix}/enterprise/log_bucket"
+      Type: "String"
+      Value: !Ref LogBucket
+      Description: "Logging bucket defined in Turbot Enterprise Foundation"
+
+
+  TurbotVpcParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub "/${ResourceNamePrefix}/enterprise/vpc"
+      Type: "String"
+      Value: !If
+        - HasPredefinedVpc
+        - !Ref PredefinedVpcId
+        - !Ref TurbotVpc
+      Description: "VPC ID of VPC defined in Turbot Enterprise Foundation"
+
+  InstallationDomainParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub "/${ResourceNamePrefix}/enterprise/installation_domain"
+      Type: "String"
+      Value: !Ref InstallationDomain
+      Description: |
+        Base domain name for the installation. For example,
+        cloud.turbot.com. Workspaces will be setup as subdomains of the
+        InstallationDomain in the formation
+        <workspace>-<identity>.<InstallationDomain>. For example,
+        ws-acme.cloud.turbot.com.
+
+  TurbotCertificateArnParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub "/${ResourceNamePrefix}/enterprise/certificate_arn"
+      Type: "String"
+      Value: !Ref TurbotCertificateArn
+      Description: |
+        ARM of an ACM certificate to be used in this region.  This must be a wildcard cert
+        with a name that matches the Installation Domain Name.
+
+  ManagedRoute53Parameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub "/${ResourceNamePrefix}/enterprise/managed_route53"
+      Type: "String"
+      Value: !Ref ManagedRoute53
+      Description: |
+        If enabled, a version alias domain records will be created using Route 53
+        for the Installation Domain zone. Set to Disabled if
+        using a custom DNS approach to versions.
+
+
+  RegionsParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub "/${ResourceNamePrefix}/enterprise/regions"
+      Type: "StringList"
+      Description: |
+        Comma separated list of the regions where Turbot is operating.
+      Value: !Join
+        - ","
+        -
+          - !If [ HasAlpha, !Ref VpcAlphaRegion, !Ref "AWS::NoValue" ]
+          - !If [ HasBeta,  !Ref VpcBetaRegion, !Ref "AWS::NoValue" ]
+          - !If [ HasGamma, !Ref VpcGammaRegion, !Ref "AWS::NoValue" ]
+
+  DatabaseSubnetGroupParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub "/${ResourceNamePrefix}/enterprise/db_subnet_group"
+      Type: "String"
+      Value: !Ref TurbotDbSubnetGroup
+      Description: "Database Subnet Group defined in Turbot Enterprise Foundation"
+
+  DatabaseSecurityGroupParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub "/${ResourceNamePrefix}/enterprise/db_security_group"
+      Type: "String"
+      Value: !Ref DbPairSecurityGroup
+      Description: "Database Pair Security Group defined in Turbot Enterprise Foundation"
+
+  LoadbalancerSubnetIdsParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub "/${ResourceNamePrefix}/enterprise/loadbalancer_subnets"
+      Type: "StringList"
+      Description: "Subnets to host the turbot load balancers"
+      Value: !If
+        - HasPredefinedVpc
+        - !Join [ ",", !Ref PredefinedPublicSubnetIds ]
+        - !If
+          - HasPublicSubnets
+          - !Join
+            - ","
+            -
+              - !If [ HasPublicSubnet1, !Ref PublicSubnet1, !Ref "AWS::NoValue" ]
+              - !If [ HasPublicSubnet2, !Ref PublicSubnet2, !Ref "AWS::NoValue" ]
+              - !If [ HasPublicSubnet3, !Ref PublicSubnet3, !Ref "AWS::NoValue" ]
+          - !Join
+            - ","
+            -
+              - !Ref TurbotSubnet1
+              - !If [ HasTurbotSubnet2, !Ref TurbotSubnet2, !Ref "AWS::NoValue" ]
+              - !If [ HasTurbotSubnet3, !Ref TurbotSubnet3, !Ref "AWS::NoValue" ]
+
+  TurbotSubnetIdsParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub "/${ResourceNamePrefix}/enterprise/turbot_subnets"
+      Type: "StringList"
+      Description: "Subnets to host the turbot application servers, containers, and VPC lambdas"
+      Value: !If
+        - HasPredefinedVpc
+        - !Join [ ",", !Ref PredefinedTurbotSubnetIds ]
+        - !Join
+          - ","
+          -
+            - !Ref TurbotSubnet1
+            - !If [ HasTurbotSubnet2, !Ref TurbotSubnet2, !Ref "AWS::NoValue" ]
+            - !If [ HasTurbotSubnet3, !Ref TurbotSubnet3, !Ref "AWS::NoValue" ]
+
+  DatabaseSubnetIdsParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub "/${ResourceNamePrefix}/enterprise/database_subnets"
+      Type: "StringList"
+      Description: "Subnets to host the turbot databases"
+      Value: !If
+        - HasPredefinedVpc
+        - !Join [ ",", !Ref PredefinedDatabaseSubnetIds ]
+        - !If
+          - HasDatabaseSubnets
+          - !Join
+            - ","
+            -
+              - !If [ HasDatabaseSubnet1, !Ref DatabaseSubnet1, !Ref "AWS::NoValue" ]
+              - !If [ HasDatabaseSubnet2, !Ref DatabaseSubnet2, !Ref "AWS::NoValue" ]
+              - !If [ HasDatabaseSubnet3, !Ref DatabaseSubnet3, !Ref "AWS::NoValue" ]
+          - !Join
+            - ","
+            -
+              - !Ref TurbotSubnet1
+              - !If [ HasTurbotSubnet2, !Ref TurbotSubnet2, !Ref "AWS::NoValue" ]
+              - !If [ HasTurbotSubnet3, !Ref TurbotSubnet3, !Ref "AWS::NoValue" ]
+
+
+  LogRetentionDaysParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub "/${ResourceNamePrefix}/enterprise/log_retention_days"
+      Type: "String"
+      Value: !Ref LogRetentionDays
+      Description: "Days to retain logs for API and worker processing."
+
+  ProcessLogRetentionInDaysParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub "/${ResourceNamePrefix}/enterprise/process_log_objects_retention_days"
+      Type: "String"
+      Value: !Ref ProcessLogRetentionInDays
+      Description: "Days to retain Turbot Process Logs stored in the TEF's Process Log bucket."
+
+  AuditTrailRetentionDaysParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub "/${ResourceNamePrefix}/enterprise/audit_trail_retention_days"
+      Type: "String"
+      Value: !Ref AuditTrailRetentionDays
+      Description: "Days to retain audit trail logs."
+
+  LoadBalancerSchemeParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub "/${ResourceNamePrefix}/enterprise/load_balancer_scheme"
+      Type: "String"
+      Value: !Ref LoadBalancerScheme
+      Description: >
+        Determines if the load balancer is internal or internet facing. If
+        internet-facing then the load balancer subnets must be "public". Otherwise,
+        the subnets should be "turbot".
+
+  InboundTrafficCidrParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub "/${ResourceNamePrefix}/enterprise/load_balancer_inbound_cidr"
+      Type: "String"
+      Value: !Ref InboundTrafficCidr
+      Description: >
+        CIDR range for inbound traffic to the Turbot load balancer (i.e. end
+        users). Typically 0.0.0.0/0, but may be updated for environments with
+        limited access requirements.
+
+  ApiDesiredScaleParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub "/${ResourceNamePrefix}/enterprise/api_desired_scale"
+      Type: "String"
+      Value: !Ref ApiDesiredScale
+      Description: API Desired Scale Size
+
+  ApiMinScalingParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub "/${ResourceNamePrefix}/enterprise/api_min_scale"
+      Type: "String"
+      Value: !Ref ApiMinScaling
+      Description: API Minimum Scale Size
+
+  ApiMaxScalingParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub "/${ResourceNamePrefix}/enterprise/api_max_scale"
+      Type: "String"
+      Value: !Ref ApiMaxScaling
+      Description: API Maximum Scale Size
+
+  EventContainerDesiredScaleParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub "/${ResourceNamePrefix}/enterprise/event_container_desired_scale"
+      Type: "String"
+      Value: !Ref EventContainerDesiredScale
+      Description: Event Container Desired Scale Size
+
+  EventContainerMinScalingParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub "/${ResourceNamePrefix}/enterprise/event_container_min_scale"
+      Type: "String"
+      Value: !Ref EventContainerMinScaling
+      Description: Event Container Minimum Scale Size
+
+  EventContainerMaxScalingParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub "/${ResourceNamePrefix}/enterprise/event_container_max_scale"
+      Type: "String"
+      Value: !Ref EventContainerMaxScaling
+      Description: Event Container Maximum Scale Size
+
+  OutboundInternetSecurityGroupParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub "/${ResourceNamePrefix}/enterprise/outbound_internet_security_group"
+      Type: "String"
+      Value: !If [ UseCustomOutboundInternetSecurityGroup, !Ref CustomOutboundInternetSecurityGroup, !Ref OutboundInternetSecurityGroup]
+      Description: "Custom Outbound Security Group for Turbot application"
+
+  LoadBalancerSecurityGroupParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub "/${ResourceNamePrefix}/enterprise/load_balancer_security_group"
+      Type: "String"
+      Value: !If [ UseCustomLoadBalancerSecurityGroup, !Ref CustomLoadBalancerSecurityGroup, !Ref LoadBalancerSecurityGroup]
+      Description: "Custom Loadbalancer Security Group for Turbot application"
+
+  ApiServiceSecurityGroupParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub "/${ResourceNamePrefix}/enterprise/api_security_group"
+      Type: "String"
+      Value: !If [ UseCustomApiServiceSecurityGroup, !Ref CustomApiServiceSecurityGroup, !Ref ApiServiceSecurityGroup]
+      Description: "Custom API Service Security Group for Turbot application"
+
+  OSGuardrailsParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub "/${ResourceNamePrefix}/enterprise/os_guardrails"
+      Type: "String"
+      Value: !Ref OSGuardrails
+      Description: "OS Guardrails"
+
+  ApiEventsScaleUpThresholdParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub "/${ResourceNamePrefix}/enterprise/api_events_scale_up_threshold_value"
+      Type: "String"
+      Value: !Ref ApiEventsScaleUpThresholdValue
+      Description: "API and Events Container scaling up threshold value"
+
+  ApiEventsScaleDownThresholdParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub "/${ResourceNamePrefix}/enterprise/api_events_scale_down_threshold_value"
+      Type: "String"
+      Value: !Ref ApiEventsScaleDownThresholdValue
+      Description: "API and Events Container scaling down threshold value"
+
+  #
+  # ENCRYPTION KEY
+  #
+
+  FoundationKey:
+    Type: AWS::KMS::Key
+    DeletionPolicy: Delete
+    Properties:
+      Description: >
+        Encryption key shared across Turbot versions. This key is used for short term data (e.g. SQS, SNS).
+      EnableKeyRotation: true
+      PendingWindowInDays: 30
+      KeyPolicy:
+        Version: 2012-10-17
+        Id: !Join [ "-", !Split [ "_", !Sub "${ResourceNamePrefix}_foundation" ] ]
+        Statement:
+          - Sid: Enable IAM User Permissions
+            Effect: Allow
+            Principal:
+              AWS: !Join ['', [!Sub 'arn:${AWS::Partition}:iam::', !Ref 'AWS::AccountId', ':root']]
+            Action: "kms:*"
+            Resource: "*"
+          - Sid: Allow Service to publish to encrypted SQS
+            Effect: Allow
+            Principal:
+              Service:
+                - events.amazonaws.com
+                - sns.amazonaws.com
+                - cloudwatch.amazonaws.com
+            Action:
+              - kms:Decrypt
+              - kms:GenerateDataKey
+            Resource: "*"
+      Tags:
+        - Key: Vendor
+          Value: !FindInMap [Constants, Turbot, EntityName]
+        - Key: Product
+          Value: !FindInMap [Constants, Product, Name]
+
+  FoundationKeyAlias:
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: !Sub "alias/${ResourceNamePrefix}_foundation"
+      TargetKeyId: !Ref FoundationKey
+
+  TransientKey:
+    Type: AWS::KMS::Key
+    DeletionPolicy: Delete
+    Properties:
+      Description: >
+        Encryption key shared across Turbot versions. This key is used for transitory short term data (e.g. SQS, SNS).
+      EnableKeyRotation: true
+      PendingWindowInDays: 30
+      KeyPolicy:
+        Version: 2012-10-17
+        Id: !Join [ "-", !Split [ "_", !Sub "${ResourceNamePrefix}_transient" ] ]
+        Statement:
+          - Sid: Enable IAM User Permissions
+            Effect: Allow
+            Principal:
+              AWS: !Join ['', [!Sub 'arn:${AWS::Partition}:iam::', !Ref 'AWS::AccountId', ':root']]
+            Action: "kms:*"
+            Resource: "*"
+          - Sid: Allow Service to publish to encrypted SQS
+            Effect: Allow
+            Principal:
+              Service:
+                - events.amazonaws.com
+                - sns.amazonaws.com
+                - cloudwatch.amazonaws.com
+            Action:
+              - kms:Decrypt
+              - kms:GenerateDataKey
+            Resource: "*"
+      Tags:
+        - Key: Vendor
+          Value: !FindInMap [Constants, Turbot, EntityName]
+        - Key: Product
+          Value: !FindInMap [Constants, Product, Name]
+
+  TransientKeyAlias:
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: !Sub "alias/${ResourceNamePrefix}_transient"
+      TargetKeyId: !Ref TransientKey
+
+  #
+  # LOGGING
+  #
+
+  LogBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    Properties:
+      BucketName: !GetAtt LogBucketNameParameter.Value
+      VersioningConfiguration:
+        Status: Enabled
+      # Block public access
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      # Always encrypt if we can. AES256 is used (instead of KMS) to allow logging from services such as ALB,
+      # which do not work with KMS.
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      # Configure lifecycle per log retention policy
+      LifecycleConfiguration:
+        Rules:
+          - Id: !Sub
+              - "Expire after ${LogRetentionDays} ${DayOrDays}. Delete after a further ${LogRetentionDays} ${DayOrDays}."
+              - DayOrDays: !If
+                - LogRetentionDayOrDays
+                - "day"
+                - "days"
+            Prefix: ""
+            Status: "Enabled"
+            ExpirationInDays: !Ref LogRetentionDays
+            NoncurrentVersionExpirationInDays: !Ref LogRetentionDays
+          - Id: "Expire after 1 day. Delete after a further 1 day for tmp/ prefix."
+            Prefix: "tmp/"
+            Status: "Enabled"
+            ExpirationInDays: 1
+            NoncurrentVersionExpirationInDays: 1
+          - Id: "Expire after 1 day. Delete after a further 1 day for temp/ prefix."
+            Prefix: "temp/"
+            Status: "Enabled"
+            ExpirationInDays: 1
+            NoncurrentVersionExpirationInDays: 1
+          - Id: "Expire after 1 day. Delete after a further 1 day for process temporary data."
+            Prefix: "processes/"
+            Status: "Enabled"
+            ExpirationInDays: 1
+            NoncurrentVersionExpirationInDays: 1
+          - Id: !Sub "Expire after ${ModInstallDataRetentionDays} days. Delete after a further ${ModInstallDataRetentionDays} days for Mod data."
+            Prefix: "mods/"
+            Status: "Enabled"
+            ExpirationInDays: !Ref ModInstallDataRetentionDays
+            NoncurrentVersionExpirationInDays: !Ref ModInstallDataRetentionDays
+
+      Tags:
+        - Key: Vendor
+          Value: !FindInMap [Constants, Turbot, EntityName]
+        - Key: Product
+          Value: !FindInMap [Constants, Product, Name]
+
+  LogBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref LogBucket
+      PolicyDocument:
+        Id: ALBLoggingFromServiceAccount
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowALBLogs
+            Action:
+              - s3:PutObject
+            Effect: Allow
+            Resource: !Sub "${LogBucket.Arn}/*"
+            Principal:
+              AWS: !FindInMap [AlbAwsServiceAccount, !Ref "AWS::Region", AccountId]
+
+  ProcessLogBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    DependsOn:
+      - LogBucket
+    Properties:
+      BucketName: !GetAtt ProcessLogBucketNameParameter.Value
+      VersioningConfiguration:
+        Status: Enabled
+      # Block public access
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      # Always encrypt if we can. AES256 is used (instead of KMS) to allow logging from services such as ALB,
+      # which do not work with KMS.
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+
+      # Configure lifecycle per log retention policy
+      LifecycleConfiguration:
+        Rules:
+          - Id: !Sub "Delete non current versions"
+            Status: "Enabled"
+            NoncurrentVersionExpirationInDays: 1
+          - Id: !Sub "Debug Logs (/debug/*) will expire after 30 days."
+            Status: "Enabled"
+            Prefix: "debug/"
+            ExpirationInDays: 30
+          - Id: !Sub "Logs will be deleted after ${ProcessLogRetentionInDays} days."
+            Status: "Enabled"
+            ExpirationInDays: !Ref ProcessLogRetentionInDays
+
+      Tags:
+        - Key: Vendor
+          Value: !FindInMap [Constants, Turbot, EntityName]
+        - Key: Product
+          Value: !FindInMap [Constants, Product, Name]
+
+  ProcessLogBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref ProcessLogBucket
+      PolicyDocument:
+        Statement:
+          - Sid: ProcessLogBucketPolicyForInventory
+            Effect: Allow
+            Principal:
+              Service: s3.amazonaws.com
+            Action: s3:PutObject
+            Resource: !Sub
+              - "${ProcessLogBucketArn}/*"
+              - ProcessLogBucketArn: !GetAtt ProcessLogBucket.Arn
+            Condition:
+              StringEquals:
+                s3:x-amz-acl: bucket-owner-full-control
+                aws:SourceAccount: !Ref "AWS::AccountId"
+              ArnLike:
+                aws:SourceArn: !GetAtt ProcessLogBucket.Arn
+
+  #
+  # RUNNABLES
+  #
+  # Lambda functions are used for mod code. Since mods are shared across Turbot versions, any
+  # infrastructure dependencies they have must be installed at a Foundation level.
+  #
+
+  # TODO - remove this once RunnableDeadLetterQueue is in use
+  LambdaRunnableDeadLetterQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub "${ResourceNamePrefix}_lambda_runnable_dlq"
+      # Use max message size of 256kb
+      MaximumMessageSize: 262144
+      # Use the maximim possible message retention for failed events, allowing time for investigation.
+      MessageRetentionPeriod: 1209600
+      # Handle messages immediately. Delays here would slow the handling of all events
+      # flowing through the queue. Consider carefully if increasing.
+      DelaySeconds: 0
+      # Increase runnable DLQ timeout to 900 seconds to help spreading out the load on the DB.
+      VisibilityTimeout: 900
+      # Our polling waits as long as possible for new messages to be added to the queue
+      ReceiveMessageWaitTimeSeconds: 20
+      # Encrypt data in the queue. Reuse the same key for 24 hrs, reducing KMS costs.
+      KmsMasterKeyId: !Ref TransientKeyAlias
+      KmsDataKeyReusePeriodSeconds: 86400
+
+      # GovCloud does not support SQS Tags. But only in Gov West, it worked in Gov East
+      # https://github.com/aws/aws-sdk-go/issues/1898
+      # issue persist as of 2019/10/18
+
+      # Tags:
+      #   - Key: Vendor
+      #     Value: !FindInMap [Constants, Turbot, EntityName]
+      #   - Key: Product
+      #     Value: !FindInMap [Constants, Product, Name]
+
+
+  #
+  # TODO - remove this after all Lambdas have been re-installed with the new role (_runnable)
+  #
+  # It's not safe to remove this because you are able to remove IAM role even if they are
+  # currently used by the Lambda (tested on 2020-01-17).
+  #
+  LambdaRunnableRole:
+    Type: AWS::IAM::Role
+    Condition: IsAlphaCreateRoles
+    Properties:
+      RoleName: !Join [ "_", !Split [ "-", !Sub "${ResourceNamePrefix}_lambda_runnable" ] ]
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+                - ecs-tasks.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - !Ref RunnablePolicy
+
+  RunnableDeadLetterQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub "${ResourceNamePrefix}_runnable_dlq"
+      # Use max message size of 256kb
+      MaximumMessageSize: 262144
+      # Use the maximim possible message retention for failed events, allowing time for investigation.
+      MessageRetentionPeriod: 1209600
+      # Handle messages immediately. Delays here would slow the handling of all events
+      # flowing through the queue. Consider carefully if increasing.
+      DelaySeconds: 0
+      # Events are handled quickly, with a simple catch and route / dispatch model. They
+      # do not require long processing time since they are not handling the actual function
+      # or container run. Keep a short visibility timeout to catch problems more quickly.
+      VisibilityTimeout: 60
+      # Our polling waits as long as possible for new messages to be added to the queue
+      ReceiveMessageWaitTimeSeconds: 20
+      # Encrypt data in the queue. Change to TransientKeyAlias immediately. Our WorkerLambda permission allows usage of all KMS keys within this account
+      KmsMasterKeyId: !Ref TransientKeyAlias
+      # Reuse the same key for 24 hrs, reducing KMS costs.
+      KmsDataKeyReusePeriodSeconds: 86400
+
+      # GovCloud does not support SQS Tags. But only in Gov West, it worked in Gov East
+      # https://github.com/aws/aws-sdk-go/issues/1898
+      # issue persist as of 2019/10/18
+
+      # Tags:
+      #   - Key: Vendor
+      #     Value: !FindInMap [Constants, Turbot, EntityName]
+      #   - Key: Product
+      #     Value: !FindInMap [Constants, Product, Name]
+
+  #
+  # Legacy role
+  #
+  #
+  # TODO - remove this after all Lambdas have been re-installed with the new role (_runnable_<region>)
+  #
+  # It's not safe to remove this because you are able to remove IAM role even if they are
+  # currently used by the Lambda (tested on 2020-01-17).
+  #
+  RunnableRole:
+    Type: AWS::IAM::Role
+    Condition: IsAlphaCreateRoles
+    Properties:
+      RoleName: !Join [ "_", !Split [ "-", !Sub "${ResourceNamePrefix}_runnable" ] ]
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+                - ecs-tasks.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - !Ref RunnablePolicy
+
+  #
+  # Runnable should use this one
+  #
+  RunnableRoleInRegion:
+    Type: AWS::IAM::Role
+    Condition: CreateRoles
+    Properties:
+      RoleName: !Sub
+        - "${ResourceNamePrefix}_runnable_${Region}"
+        - Region: !Join [ "_", !Split [ "-", !Ref "AWS::Region" ] ]
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+                - ecs-tasks.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - !Ref RunnablePolicyInRegion
+
+  RunnableInVpcRoleInRegion:
+    Type: AWS::IAM::Role
+    Condition: CreateRoles
+    Properties:
+      RoleName: !Sub
+        - "${ResourceNamePrefix}_runnable_in_vpc_${Region}"
+        - Region: !Join [ "_", !Split [ "-", !Ref "AWS::Region" ] ]
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+                - ecs-tasks.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - !Ref RunnableInVpcPolicyInRegion
+
+  #
+  # Runnable IAM Policy
+  #
+  # NOTE: This policy is given to the Mod's Lambda Functions. Please have a thorough security review
+  # when making changes to this policy.
+  #
+  RunnablePolicyInRegion:
+    Type: AWS::IAM::ManagedPolicy
+    Condition: CreateRoles
+    Properties:
+      ManagedPolicyName: !Sub "${ResourceNamePrefix}_runnable_policy_${AWS::Region}"
+      Description: Policy for creating a Lambda run policy
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - sns:publish
+            Resource: !Sub "arn:${AWS::Partition}:sns:${AWS::Region}:${AWS::AccountId}:${ResourceNamePrefix}_*_events"
+
+          - Effect: Allow
+            Action:
+              - kms:Decrypt
+              - kms:GenerateDataKey
+            Resource:
+              - !GetAtt FoundationKey.Arn
+              - !GetAtt TransientKey.Arn
+
+          - Effect: Allow
+            Action:
+              - sqs:SendMessage
+            Resource: !GetAtt RunnableDeadLetterQueue.Arn
+
+          - Effect: Allow
+            Action:
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+              - logs:CreateLogGroup
+            Resource:
+              # Runnable name is create with `-` as separator
+              - !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${ResourceNamePrefix}-*
+              - !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${ResourceNamePrefix}-*:log-stream:*
+
+
+  RunnableInVpcPolicyInRegion:
+    Type: AWS::IAM::ManagedPolicy
+    Condition: CreateRoles
+    Properties:
+      ManagedPolicyName: !Sub "${ResourceNamePrefix}_runnable_in_vpc_policy_${AWS::Region}"
+      Description: Policy for creating a Lambda run policy
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - sns:publish
+            Resource: !Sub "arn:${AWS::Partition}:sns:${AWS::Region}:${AWS::AccountId}:${ResourceNamePrefix}_*_events"
+
+          - Effect: Allow
+            Action:
+              - kms:Decrypt
+              - kms:GenerateDataKey
+            Resource:
+              - !GetAtt FoundationKey.Arn
+              - !GetAtt TransientKey.Arn
+
+          - Effect: Allow
+            Action:
+              - sqs:SendMessage
+            Resource: !GetAtt RunnableDeadLetterQueue.Arn
+
+          - Effect: Allow
+            Action:
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+              - logs:CreateLogGroup
+            Resource:
+              # Runnable name is create with `-` as separator
+              - !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${ResourceNamePrefix}-*
+              - !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${ResourceNamePrefix}-*:log-stream:*
+
+          # Required to run Lambda in VPC
+          - Effect: Allow
+            Action:
+              - ec2:DescribeNetworkInterfaces
+            Resource: "*"
+
+          #
+          # https://docs.aws.amazon.com/IAM/latest/UserGuide/list_amazonec2.html
+          #
+          # CreateNetworkInterface and DeleteNetworkInterface needs resource * and does not have condition keys (except the global one)
+          # meaning we can't restrict to the subnet or VPC.
+          - Effect: Allow
+            Action:
+              - ec2:CreateNetworkInterface
+              - ec2:DeleteNetworkInterface
+            Resource: "*"
+
+  #
+  # Runnable IAM Policy
+  #
+  #
+  # NOTE: This policy is given to the Mod's Lambda Functions. Please have a thorough security review
+  # when making changes to this policy.
+  #
+  # This policy is deprecated, only very old Lambda functions will be installed with this policy
+  #
+  RunnablePolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Condition: IsAlphaCreateRoles
+    Properties:
+      ManagedPolicyName: !Sub "${ResourceNamePrefix}_runnable_policy"
+      Description: Policy for creating a Lambda run policy
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - sns:publish
+            # This is not going to work when we do the work to run Lambda in the target account
+            Resource: !Sub "arn:${AWS::Partition}:sns:*:${AWS::AccountId}:${ResourceNamePrefix}_*_events"
+
+          - Effect: Allow
+            Action:
+              - kms:Decrypt
+              - kms:GenerateDataKey
+            # Note: we need give permission to * here so we can access the keys for all regions.
+            # new Lambdas will be created with new per region runnable role.
+            Resource: !Sub "arn:${AWS::Partition}:kms:*:${AWS::AccountId}:key/*"
+
+          - Effect: Allow
+            Action:
+              - sqs:SendMessage
+            Resource:
+              - !Sub "arn:${AWS::Partition}:sqs:*:${AWS::AccountId}:${ResourceNamePrefix}_runnable_dlq"
+              - !Sub "arn:${AWS::Partition}:sqs:*:${AWS::AccountId}:${ResourceNamePrefix}_lambda_runnable_dlq"
+
+          - Effect: Allow
+            Action:
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+              - logs:CreateLogGroup
+            Resource:
+              # TODO: this is not going to work when we implement running Lambda in customers' account
+
+              # Runnable name is create with `-` as separator
+              - !Sub arn:${AWS::Partition}:logs:*:${AWS::AccountId}:log-group:/aws/lambda/${ResourceNamePrefix}-*
+              - !Sub arn:${AWS::Partition}:logs:*:${AWS::AccountId}:log-group:/aws/lambda/${ResourceNamePrefix}-*:log-stream:*
+
+
+  #
+  # Security groups
+  #
+  OutboundInternetSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Condition: CreateOutboundInternetSecurityGroup
+    Properties:
+      GroupName: !Sub "${ResourceNamePrefix}_outbound_internet_security_group"
+      GroupDescription: Allow outbound HTTPS to the Internet.
+      VpcId: !If
+        - HasPredefinedVpc
+        - !Ref PredefinedVpcId
+        - !Ref TurbotVpc
+      SecurityGroupIngress: []
+      SecurityGroupEgress:
+        - Description: Outbound HTTPS Internet access
+          CidrIp: 0.0.0.0/0
+          FromPort: 443
+          ToPort: 443
+          IpProtocol: tcp
+          #
+          # Without opening port 80, ECS optimised image will timeout:
+          # Could not retrieve mirrorlist http://repo.ap-southeast-2.amazonaws.com/latest/main/mirror.list error was
+          # 12: Timeout on http://repo.ap-southeast-2.amazonaws.com/latest/main/mirror.list: (28, 'Connection timed out after 5000 milliseconds')
+          # Mar 05 00:12:33 cloud-init[2231]: util.py[WARNING]: Package upgrade failed
+          #
+          # The instance still boots OK but it's adding extra initialisation time
+          #
+        - Description: Outbound HTTP Internet access. Needed by cloud-init in ECS optimised image
+          CidrIp: 0.0.0.0/0
+          FromPort: 80
+          ToPort: 80
+          IpProtocol: tcp
+      Tags:
+        - Key: Vendor
+          Value: !FindInMap [Constants, Turbot, EntityName]
+        - Key: Product
+          Value: !FindInMap [Constants, Product, Name]
+        - Key: Name
+          Value: !Sub "${ResourceNamePrefix}_outbound_internet_security_group"
+
+  LoadBalancerSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Condition: CreateLoadBalancerSecurityGroup
+    Properties:
+      GroupName: !Sub "${ResourceNamePrefix}_load_balancer_security_group"
+      GroupDescription: Load Balancer
+      VpcId: !If
+        - HasPredefinedVpc
+        - !Ref PredefinedVpcId
+        - !Ref TurbotVpc
+      Tags:
+        - Key: Name
+          Value: !Sub "${ResourceNamePrefix}_load_balancer_security_group"
+        - Key: Vendor
+          Value: !FindInMap [Constants, Turbot, EntityName]
+        - Key: Product
+          Value: !FindInMap [Constants, Product, Name]
+
+  ApiServiceSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Condition: CreateApiServiceSecurityGroup
+    Properties:
+      GroupName: !Sub ${ResourceNamePrefix}_api_security_group
+      GroupDescription: API Service
+      VpcId: !If
+        - HasPredefinedVpc
+        - !Ref PredefinedVpcId
+        - !Ref TurbotVpc
+      SecurityGroupEgress:
+        - Description: Loopback - required CloudFormation hack to avoid adding the default egress rule
+          CidrIp: 127.0.0.1/32
+          FromPort: 443
+          ToPort: 443
+          IpProtocol: tcp
+      Tags:
+        - Key: Name
+          Value: !Sub "${ResourceNamePrefix}_api_security_group"
+        - Key: Vendor
+          Value: !FindInMap [Constants, Turbot, EntityName]
+        - Key: Product
+          Value: !FindInMap [Constants, Product, Name]
+
+  LoadBalancerSgHttpsFromClients:
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: CreateLoadBalancerSecurityGroup
+    Properties:
+      GroupId: !GetAtt LoadBalancerSecurityGroup.GroupId
+      Description: HTTPS from Clients to LB
+      CidrIp: !Ref InboundTrafficCidr
+      IpProtocol: tcp
+      FromPort: 443
+      ToPort: 443
+
+  LoadBalancerSgHttpFromClients:
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: CreateLoadBalancerSecurityGroup
+    Properties:
+      GroupId: !GetAtt LoadBalancerSecurityGroup.GroupId
+      Description: HTTP from Clients to LB
+      CidrIp: !Ref InboundTrafficCidr
+      IpProtocol: tcp
+      FromPort: 80
+      ToPort: 80
+
+  LoadBalancerSgHttpsToEcs:
+    Type: AWS::EC2::SecurityGroupEgress
+    Condition: CreateLoadBalancerSecurityGroup
+    Properties:
+      GroupId: !GetAtt LoadBalancerSecurityGroup.GroupId
+      Description: HTTPS from LB to ECS
+      DestinationSecurityGroupId: !GetAtt ApiServiceSecurityGroup.GroupId
+      IpProtocol: tcp
+      # We've observed that target groups often open ports in the 32k range
+      FromPort: 32768
+      ToPort: 65535
+
+  ApiServiceSgHttpsFromLoadBalancer:
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: CreateApiServiceSecurityGroup
+    Properties:
+      GroupId: !GetAtt ApiServiceSecurityGroup.GroupId
+      Description: HTTPS from LB to API Containers
+      SourceSecurityGroupId: !GetAtt LoadBalancerSecurityGroup.GroupId
+      IpProtocol: tcp
+      FromPort: 32768
+      ToPort: 65535
+
+  HiveManager:
+    Type: AWS::Lambda::Function
+    DependsOn:
+      - TefIamParameters
+    Properties:
+      FunctionName: !Sub "${ResourceNamePrefix}_hive_manager"
+      Description: Turbot Hive Manager CloudFormation Custom Resource handler.
+      Code:
+        S3Bucket: !Sub
+          - "turbot-software-${ReleasePhase}-${Region}"
+          - ReleasePhase: !Ref ReleasePhase
+            Region: !Ref "AWS::Region"
+        S3Key: !Sub
+          - "tef/${Version}/turbot-hive-manager.zip"
+          - Version: !FindInMap [Constants, Product, Version]
+      Handler: index.handler
+      Runtime: nodejs14.x
+      Role: !GetAtt [TefIamParameters, hive_manager_execution_role]
+      VpcConfig:
+        SecurityGroupIds:
+          - !GetAtt OutboundInternetSecurityGroupParameter.Value
+          - !Ref DbPairSecurityGroup
+        SubnetIds: !If
+          - HasPredefinedVpc
+          - !Ref PredefinedTurbotSubnetIds
+          -
+            - !Ref TurbotSubnet1
+            - !If [ HasTurbotSubnet2, !Ref TurbotSubnet2, !Ref "AWS::NoValue" ]
+            - !If [ HasTurbotSubnet3, !Ref TurbotSubnet3, !Ref "AWS::NoValue" ]
+      MemorySize: 1024
+      Timeout: 300
+      Environment:
+        Variables:
+          AWS_ACCOUNT_ID: !Ref "AWS::AccountId"
+
+          # Set the environment for the kit, which is always production when installed in AWS
+          TURBOT_ENVIRONMENT: production
+          TURBOT_ALPHA_REGION_PARAMETER: !GetAtt AlphaRegionParameter.Value
+          TURBOT_PREFIX: !Ref ResourceNamePrefix
+          TURBOT_INSTALLATION_DOMAIN: !Ref InstallationDomain
+          TURBOT_REGIONS: !Join
+            - ","
+            -
+              - !If [ HasAlpha, !Ref VpcAlphaRegion, !Ref "AWS::NoValue" ]
+              - !If [ HasBeta,  !Ref VpcBetaRegion,  !Ref "AWS::NoValue" ]
+              - !If [ HasGamma, !Ref VpcGammaRegion, !Ref "AWS::NoValue" ]
+          HTTP_PROXY: !If [ HasHttpProxy, !Ref HttpProxy, "" ]
+          http_proxy: !If [ HasHttpProxy, !Ref HttpProxy, "" ]
+          HTTPS_PROXY: !If [ HasHttpsProxy, !Ref HttpsProxy, "" ]
+          https_proxy: !If [ HasHttpsProxy, !Ref HttpsProxy, "" ]
+          NO_PROXY: !If [ HasNoProxy, !Ref NoProxy, "" ]
+          no_proxy: !If [ HasNoProxy, !Ref NoProxy, "" ]
+          NODE_TLS_REJECT_UNAUTHORIZED: !If [ AllowUseOfSelfSignedCertificate, "0", "" ]
+      Tags:
+        - Key: Vendor
+          Value: !FindInMap [Constants, Turbot, EntityName]
+        - Key: Product
+          Value: !FindInMap [Constants, Product, Name]
+
+  WorkspaceManager:
+    Type: AWS::Lambda::Function
+    Condition: IsAlpha
+    DependsOn:
+      - TefIamParameters
+    Properties:
+      FunctionName: !Sub "${ResourceNamePrefix}_workspace_manager"
+      Description: Turbot Workspace Manager CloudFormation Custom Resource handler.
+      Code:
+        S3Bucket: !Sub
+          - "turbot-software-${ReleasePhase}-${Region}"
+          - ReleasePhase: !Ref ReleasePhase
+            Region: !Ref "AWS::Region"
+        S3Key: !Sub
+          - "tef/${Version}/turbot-workspace-manager.zip"
+          - Version: !FindInMap [Constants, Product, Version]
+      Handler: index.handler
+      Runtime: nodejs14.x
+      Role: !GetAtt [TefIamParameters, workspace_manager_execution_role]
+      VpcConfig:
+        SecurityGroupIds:
+          - !GetAtt OutboundInternetSecurityGroupParameter.Value
+        SubnetIds: !If
+          - HasPredefinedVpc
+          - !Ref PredefinedTurbotSubnetIds
+          -
+            - !Ref TurbotSubnet1
+            - !If [ HasTurbotSubnet2, !Ref TurbotSubnet2, !Ref "AWS::NoValue" ]
+            - !If [ HasTurbotSubnet3, !Ref TurbotSubnet3, !Ref "AWS::NoValue" ]
+      MemorySize: 1024
+
+      # Maximum execution time to allow long running DB scripts for changing notification table
+      Timeout: 900
+
+      Environment:
+        Variables:
+          # Set the environment for the kit, which is always production when installed in AWS
+          TURBOT_ENVIRONMENT: production
+          TURBOT_PREFIX: !Ref ResourceNamePrefix
+          TURBOT_INSTALLATION_DOMAIN: !Ref InstallationDomain
+          TURBOT_REGIONS: !Join
+            - ","
+            -
+              - !If [ HasAlpha, !Ref VpcAlphaRegion, !Ref "AWS::NoValue" ]
+              - !If [ HasBeta,  !Ref VpcBetaRegion,  !Ref "AWS::NoValue" ]
+              - !If [ HasGamma, !Ref VpcGammaRegion, !Ref "AWS::NoValue" ]
+
+          AWS_ACCOUNT_ID: !Ref "AWS::AccountId"
+          TURBOT_REGION: !Ref "AWS::Region"
+
+          HTTP_PROXY: !If [ HasHttpProxy, !Ref HttpProxy, "" ]
+          http_proxy: !If [ HasHttpProxy, !Ref HttpProxy, "" ]
+          HTTPS_PROXY: !If [ HasHttpsProxy, !Ref HttpsProxy, "" ]
+          https_proxy: !If [ HasHttpsProxy, !Ref HttpsProxy, "" ]
+          NO_PROXY: !If [ HasNoProxy, !Ref NoProxy, "" ]
+          no_proxy: !If [ HasNoProxy, !Ref NoProxy, "" ]
+          NODE_TLS_REJECT_UNAUTHORIZED: !If [ AllowUseOfSelfSignedCertificate, "0", "" ]
+      Tags:
+        - Key: Vendor
+          Value: !FindInMap [Constants, Turbot, EntityName]
+        - Key: Product
+          Value: !FindInMap [Constants, Product, Name]
+
+
+
+
+  #
+  # VPC CONFIGURATION
+  #
+
+  TurbotVpc:
+    Type: AWS::EC2::VPC
+    Condition: CreateNetwork
+    Properties:
+      CidrBlock:
+        !If
+          - IsAlpha
+          - !Ref VpcAlphaCidr
+          - "Fn::If":
+            - IsBeta
+            - !Ref VpcBetaCidr
+            - !Ref VpcGammaCidr
+      EnableDnsSupport: True
+      EnableDnsHostnames: True
+      Tags:
+        - Key: Vendor
+          Value: !FindInMap [Constants, Turbot, EntityName]
+        - Key: Product
+          Value: !FindInMap [Constants, Product, Name]
+        - Key: Name
+          Value: !Sub
+            - "turbot @ ${Cidr}"
+            - Cidr: !If
+                - IsAlpha
+                - !Ref VpcAlphaCidr
+                - "Fn::If":
+                  - IsBeta
+                  - !Ref VpcBetaCidr
+                  - !Ref VpcGammaCidr
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Condition: CreateNetwork
+    Properties:
+      Tags:
+        - Key: Vendor
+          Value: !FindInMap [Constants, Turbot, EntityName]
+        - Key: Product
+          Value: !FindInMap [Constants, Product, Name]
+
+  TurbotVpcInternetGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Condition: CreateNetwork
+    Properties:
+      VpcId: !Ref TurbotVpc
+      InternetGatewayId: !Ref InternetGateway
+
+
+  #
+  # PEERING CONNECTIONS
+  #
+
+  VpcPeeringAlphaToBeta:
+    Type: AWS::EC2::VPCPeeringConnection
+    Condition: PeerAlphaToBeta
+    Properties:
+      VpcId: !Ref TurbotVpc
+      PeerVpcId: !Ref VpcBetaId
+      PeerRegion: !Ref VpcBetaRegion
+      Tags:
+        - Key: Name
+          Value: !Sub "${VpcAlphaCidr} @ ${VpcAlphaRegion} [${TurbotVpc}] <==> ${VpcBetaCidr} @ ${VpcBetaRegion} [${VpcBetaId}]"
+        - Key: Vendor
+          Value: !FindInMap [Constants, Turbot, EntityName]
+        - Key: Product
+          Value: !FindInMap [Constants, Product, Name]
+
+  VpcPeeringAlphaToGamma:
+    Type: AWS::EC2::VPCPeeringConnection
+    Condition: PeerAlphaToGamma
+    Properties:
+      VpcId: !Ref TurbotVpc
+      PeerVpcId: !Ref VpcGammaId
+      PeerRegion: !Ref VpcGammaRegion
+      Tags:
+        - Key: Name
+          Value: !Sub "${VpcAlphaCidr} @ ${VpcAlphaRegion} [${TurbotVpc}] <==> ${VpcGammaCidr} @ ${VpcGammaRegion} [${VpcGammaId}]"
+        - Key: Vendor
+          Value: !FindInMap [Constants, Turbot, EntityName]
+        - Key: Product
+          Value: !FindInMap [Constants, Product, Name]
+
+  VpcPeeringBetaToGamma:
+    Type: AWS::EC2::VPCPeeringConnection
+    Condition: PeerBetaToGamma
+    Properties:
+      VpcId: !Ref TurbotVpc
+      PeerVpcId: !Ref VpcGammaId
+      PeerRegion: !Ref VpcGammaRegion
+      Tags:
+        - Key: Name
+          Value: !Sub "${VpcBetaCidr} @ ${VpcBetaRegion} [${TurbotVpc}] <==> ${VpcGammaCidr} @ ${VpcGammaRegion} [${VpcGammaId}]"
+        - Key: Vendor
+          Value: !FindInMap [Constants, Turbot, EntityName]
+        - Key: Product
+          Value: !FindInMap [Constants, Product, Name]
+
+
+
+  #
+  # PUBLIC SUBNETS
+  #
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Condition: HasPublicSubnets
+    Properties:
+      VpcId: !Ref TurbotVpc
+      Tags:
+        - Key: Vendor
+          Value: !FindInMap [Constants, Turbot, EntityName]
+        - Key: Product
+          Value: !FindInMap [Constants, Product, Name]
+        - Key: Name
+          Value: public
+
+  PublicDefaultRouteToInternetGateway:
+    Type: AWS::EC2::Route
+    Condition: HasPublicSubnets
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: "0.0.0.0/0"
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Condition: HasPublicSubnet1
+    Properties:
+      VpcId: !Ref TurbotVpc
+      CidrBlock: !Ref PublicSubnet1Cidr
+      AvailabilityZone: !Select [0, !GetAZs ""]
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Vendor
+          Value: !FindInMap [Constants, Turbot, EntityName]
+        - Key: Product
+          Value: !FindInMap [Constants, Product, Name]
+        - Key: Name
+          Value: !Sub "public @ ${PublicSubnet1Cidr}"
+
+  PublicSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Condition: HasPublicSubnet1
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet1
+
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet
+    Condition: HasPublicSubnet2
+    Properties:
+      VpcId: !Ref TurbotVpc
+      CidrBlock: !Ref PublicSubnet2Cidr
+      AvailabilityZone: !Select [1, !GetAZs ""]
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Vendor
+          Value: !FindInMap [Constants, Turbot, EntityName]
+        - Key: Product
+          Value: !FindInMap [Constants, Product, Name]
+        - Key: Name
+          Value: !Sub "public @ ${PublicSubnet2Cidr}"
+
+  PublicSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Condition: HasPublicSubnet2
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet2
+
+  PublicSubnet3:
+    Type: AWS::EC2::Subnet
+    Condition: HasPublicSubnet3
+    Properties:
+      VpcId: !Ref TurbotVpc
+      CidrBlock: !Ref PublicSubnet3Cidr
+      AvailabilityZone: !Select [2, !GetAZs ""]
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Vendor
+          Value: !FindInMap [Constants, Turbot, EntityName]
+        - Key: Product
+          Value: !FindInMap [Constants, Product, Name]
+        - Key: Name
+          Value: !Sub "public @ ${PublicSubnet3Cidr}"
+
+  PublicSubnet3RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Condition: HasPublicSubnet3
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet3
+
+
+
+  #
+  # NAT GATEWAYS
+  #
+
+  EipNatGateway1:
+    Type: AWS::EC2::EIP
+    DependsOn: InternetGateway
+    Condition: HasNatGateway1
+    Properties:
+      Domain: vpc
+
+  NatGateway1:
+    Type: AWS::EC2::NatGateway
+    Condition: HasNatGateway1
+    DependsOn: EipNatGateway1
+    Properties:
+      SubnetId: !Ref PublicSubnet1
+      AllocationId: !GetAtt EipNatGateway1.AllocationId
+      Tags:
+        - Key: Vendor
+          Value: !FindInMap [Constants, Turbot, EntityName]
+        - Key: Product
+          Value: !FindInMap [Constants, Product, Name]
+        - Key: Name
+          Value: "NAT #1"
+
+  EipNatGateway2:
+    Type: AWS::EC2::EIP
+    DependsOn: InternetGateway
+    Condition: HasNatGateway2
+    Properties:
+      Domain: vpc
+
+  NatGateway2:
+    Type: AWS::EC2::NatGateway
+    Condition: HasNatGateway2
+    DependsOn: EipNatGateway2
+    Properties:
+      SubnetId: !Ref PublicSubnet2
+      AllocationId: !GetAtt EipNatGateway2.AllocationId
+      Tags:
+        - Key: Vendor
+          Value: !FindInMap [Constants, Turbot, EntityName]
+        - Key: Product
+          Value: !FindInMap [Constants, Product, Name]
+        - Key: Name
+          Value: "NAT #2"
+
+  EipNatGateway3:
+    Type: AWS::EC2::EIP
+    DependsOn: InternetGateway
+    Condition: HasNatGateway3
+    Properties:
+      Domain: vpc
+
+  NatGateway3:
+    Type: AWS::EC2::NatGateway
+    Condition: HasNatGateway3
+    DependsOn: EipNatGateway3
+    Properties:
+      SubnetId: !Ref PublicSubnet3
+      AllocationId: !GetAtt EipNatGateway3.AllocationId
+      Tags:
+        - Key: Vendor
+          Value: !FindInMap [Constants, Turbot, EntityName]
+        - Key: Product
+          Value: !FindInMap [Constants, Product, Name]
+        - Key: Name
+          Value: "NAT #3"
+
+  VpcEndpointForS3:
+    Type: AWS::EC2::VPCEndpoint
+    Condition: CreateVpcEndpoint
+    Properties:
+      RouteTableIds:
+        - !If [ HasPublicSubnets, !Ref PublicRouteTable, !Ref "AWS::NoValue" ]
+        - !If [ HasTurbotSubnet1, !Ref TurbotRouteTable1, !Ref "AWS::NoValue" ]
+        - !If [ HasTurbotSubnet2, !Ref TurbotRouteTable2, !Ref "AWS::NoValue" ]
+        - !If [ HasTurbotSubnet3, !Ref TurbotRouteTable3, !Ref "AWS::NoValue" ]
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.s3'
+      VpcEndpointType: Gateway
+      VpcId: !Ref TurbotVpc
+
+
+  #
+  # TURBOT SUBNETS
+  #
+
+  TurbotSubnet1:
+    Type: AWS::EC2::Subnet
+    Condition: HasTurbotSubnet1
+    Properties:
+      VpcId: !Ref TurbotVpc
+      CidrBlock: !Ref TurbotSubnet1Cidr
+      AvailabilityZone: !Select [0, !GetAZs ""]
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Vendor
+          Value: !FindInMap [Constants, Turbot, EntityName]
+        - Key: Product
+          Value: !FindInMap [Constants, Product, Name]
+        - Key: Name
+          Value: !Sub "turbot @ ${TurbotSubnet1Cidr}"
+
+  TurbotRouteTable1:
+    Type: AWS::EC2::RouteTable
+    Condition: HasTurbotSubnet1
+    Properties:
+      VpcId: !Ref TurbotVpc
+      Tags:
+        - Key: Vendor
+          Value: !FindInMap [Constants, Turbot, EntityName]
+        - Key: Product
+          Value: !FindInMap [Constants, Product, Name]
+        - Key: Name
+          Value: !Sub "turbot @ ${TurbotSubnet1Cidr}"
+
+  TurbotSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Condition: HasTurbotSubnet1
+    Properties:
+      RouteTableId: !Ref TurbotRouteTable1
+      SubnetId: !Ref TurbotSubnet1
+
+  TurbotSubnet1DefaultRouteToNatGateway:
+    Type: AWS::EC2::Route
+    Condition: HasTurbotSubnet1
+    Properties:
+      RouteTableId: !Ref TurbotRouteTable1
+      DestinationCidrBlock: "0.0.0.0/0"
+      NatGatewayId: !Ref NatGateway1
+
+  TurbotSubnet2:
+    Type: AWS::EC2::Subnet
+    Condition: HasTurbotSubnet2
+    Properties:
+      VpcId: !Ref TurbotVpc
+      CidrBlock: !Ref TurbotSubnet2Cidr
+      AvailabilityZone: !Select [1, !GetAZs ""]
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Vendor
+          Value: !FindInMap [Constants, Turbot, EntityName]
+        - Key: Product
+          Value: !FindInMap [Constants, Product, Name]
+        - Key: Name
+          Value: !Sub "turbot @ ${TurbotSubnet2Cidr}"
+
+  TurbotRouteTable2:
+    Type: AWS::EC2::RouteTable
+    Condition: HasTurbotSubnet2
+    Properties:
+      VpcId: !Ref TurbotVpc
+      Tags:
+        - Key: Vendor
+          Value: !FindInMap [Constants, Turbot, EntityName]
+        - Key: Product
+          Value: !FindInMap [Constants, Product, Name]
+        - Key: Name
+          Value: !Sub "turbot @ ${TurbotSubnet2Cidr}"
+
+  TurbotSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Condition: HasTurbotSubnet2
+    Properties:
+      RouteTableId: !Ref TurbotRouteTable2
+      SubnetId: !Ref TurbotSubnet2
+
+  TurbotSubnet2DefaultRouteToNatGateway:
+    Type: AWS::EC2::Route
+    Condition: HasTurbotSubnet2
+    Properties:
+      RouteTableId: !Ref TurbotRouteTable2
+      DestinationCidrBlock: "0.0.0.0/0"
+      NatGatewayId: !If [ HasNatGateway2, !Ref NatGateway2, !Ref NatGateway1 ]
+
+  TurbotSubnet3:
+    Type: AWS::EC2::Subnet
+    Condition: HasTurbotSubnet3
+    Properties:
+      VpcId: !Ref TurbotVpc
+      CidrBlock: !Ref TurbotSubnet3Cidr
+      AvailabilityZone: !Select [2, !GetAZs ""]
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Vendor
+          Value: !FindInMap [Constants, Turbot, EntityName]
+        - Key: Product
+          Value: !FindInMap [Constants, Product, Name]
+        - Key: Name
+          Value: !Sub "turbot @ ${TurbotSubnet3Cidr}"
+
+  TurbotRouteTable3:
+    Type: AWS::EC2::RouteTable
+    Condition: HasTurbotSubnet3
+    Properties:
+      VpcId: !Ref TurbotVpc
+      Tags:
+        - Key: Vendor
+          Value: !FindInMap [Constants, Turbot, EntityName]
+        - Key: Product
+          Value: !FindInMap [Constants, Product, Name]
+        - Key: Name
+          Value: !Sub "turbot @ ${TurbotSubnet3Cidr}"
+
+  TurbotSubnet3RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Condition: HasTurbotSubnet3
+    Properties:
+      RouteTableId: !Ref TurbotRouteTable3
+      SubnetId: !Ref TurbotSubnet3
+
+  TurbotSubnet3DefaultRouteToNatGateway:
+    Type: AWS::EC2::Route
+    Condition: HasTurbotSubnet3
+    Properties:
+      RouteTableId: !Ref TurbotRouteTable3
+      DestinationCidrBlock: "0.0.0.0/0"
+      NatGatewayId: !If [ HasNatGateway3, !Ref NatGateway3, !Ref NatGateway1 ]
+
+
+
+  #
+  # DATABASE SUBNETS
+  #
+
+  DatabaseRouteTable:
+    Type: AWS::EC2::RouteTable
+    Condition: HasDatabaseSubnets
+    Properties:
+      VpcId: !Ref TurbotVpc
+      Tags:
+        - Key: Vendor
+          Value: !FindInMap [Constants, Turbot, EntityName]
+        - Key: Product
+          Value: !FindInMap [Constants, Product, Name]
+        - Key: Name
+          Value: database
+
+  DatabaseSubnet1:
+    Type: AWS::EC2::Subnet
+    Condition: HasDatabaseSubnet1
+    Properties:
+      VpcId: !Ref TurbotVpc
+      CidrBlock: !Ref DatabaseSubnet1Cidr
+      AvailabilityZone: !Select [0, !GetAZs ""]
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Vendor
+          Value: !FindInMap [Constants, Turbot, EntityName]
+        - Key: Product
+          Value: !FindInMap [Constants, Product, Name]
+        - Key: Name
+          Value: !Sub "database @ ${DatabaseSubnet1Cidr}"
+
+  DatabaseSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Condition: HasDatabaseSubnet1
+    Properties:
+      RouteTableId: !Ref DatabaseRouteTable
+      SubnetId: !Ref DatabaseSubnet1
+
+  DatabaseSubnet2:
+    Type: AWS::EC2::Subnet
+    Condition: HasDatabaseSubnet2
+    Properties:
+      VpcId: !Ref TurbotVpc
+      CidrBlock: !Ref DatabaseSubnet2Cidr
+      AvailabilityZone: !Select [1, !GetAZs ""]
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Vendor
+          Value: !FindInMap [Constants, Turbot, EntityName]
+        - Key: Product
+          Value: !FindInMap [Constants, Product, Name]
+        - Key: Name
+          Value: !Sub "database @ ${DatabaseSubnet2Cidr}"
+
+  DatabaseSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Condition: HasDatabaseSubnet2
+    Properties:
+      RouteTableId: !Ref DatabaseRouteTable
+      SubnetId: !Ref DatabaseSubnet2
+
+  DatabaseSubnet3:
+    Type: AWS::EC2::Subnet
+    Condition: HasDatabaseSubnet3
+    Properties:
+      VpcId: !Ref TurbotVpc
+      CidrBlock: !Ref DatabaseSubnet3Cidr
+      AvailabilityZone: !Select [2, !GetAZs ""]
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Vendor
+          Value: !FindInMap [Constants, Turbot, EntityName]
+        - Key: Product
+          Value: !FindInMap [Constants, Product, Name]
+        - Key: Name
+          Value: !Sub "database @ ${DatabaseSubnet3Cidr}"
+
+  DatabaseSubnet3RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Condition: HasDatabaseSubnet3
+    Properties:
+      RouteTableId: !Ref DatabaseRouteTable
+      SubnetId: !Ref DatabaseSubnet3
+
+
+
+  #
+  # DATABASE SUBNET GROUP
+  #
+
+  TurbotDbSubnetGroup:
+    Type: "AWS::RDS::DBSubnetGroup"
+    Properties:
+      DBSubnetGroupName: !Sub "${ResourceNamePrefix}_db"
+      DBSubnetGroupDescription: Turbot DB Subnet Group utilizing all availability zones configured with networking.
+      SubnetIds: !If
+        - HasPredefinedVpc
+        - !Ref PredefinedDatabaseSubnetIds
+        - !If
+          - HasDatabaseSubnets
+          -
+            - !If [ HasDatabaseSubnet1, !Ref DatabaseSubnet1, !Ref "AWS::NoValue" ]
+            - !If [ HasDatabaseSubnet2, !Ref DatabaseSubnet2, !Ref "AWS::NoValue" ]
+            - !If [ HasDatabaseSubnet3, !Ref DatabaseSubnet3, !Ref "AWS::NoValue" ]
+          -
+            - !Ref TurbotSubnet1
+            - !If [ HasTurbotSubnet2, !Ref TurbotSubnet2, !Ref "AWS::NoValue" ]
+            - !If [ HasTurbotSubnet3, !Ref TurbotSubnet3, !Ref "AWS::NoValue" ]
+      Tags:
+        - Key: Vendor
+          Value: !FindInMap [Constants, Turbot, EntityName]
+        - Key: Product
+          Value: !FindInMap [Constants, Product, Name]
+
+
+  #
+  # SECURITY GROUPS
+  #
+
+  DbPairSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub "${ResourceNamePrefix}_db_pair"
+      GroupDescription: Allow access to postgres between all resources with this pair SG.
+      VpcId: !If
+        - HasPredefinedVpc
+        - !Ref PredefinedVpcId
+        - !Ref TurbotVpc
+      Tags:
+        - Key: Name
+          Value: !Sub "${ResourceNamePrefix}_db_pair"
+        - Key: Vendor
+          Value: !FindInMap [Constants, Turbot, EntityName]
+        - Key: Product
+          Value: !FindInMap [Constants, Product, Name]
+
+  #
+  # Ideally the source & destination is the DB Security Group itself, however this is not going
+  # to work for multi-region setup. We should be able to do the DB Security Group itself for the Alpha region,
+  # but we'd like to prioritise consistency.
+  DbPairSecurityGroupPostgresEgressAlpha:
+    Type: AWS::EC2::SecurityGroupEgress
+    Condition: HasAlpha
+    Properties:
+      GroupId: !Ref DbPairSecurityGroup
+      Description: Postgres
+      CidrIp: !Ref VpcAlphaCidr
+      IpProtocol: tcp
+      FromPort: 5432
+      ToPort: 5432
+
+  DbPairSecurityGroupPostgresIngressAlpha:
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: HasAlpha
+    Properties:
+      GroupId: !Ref DbPairSecurityGroup
+      Description: Postgres
+      CidrIp: !Ref VpcAlphaCidr
+      IpProtocol: tcp
+      FromPort: 5432
+      ToPort: 5432
+
+  DbPairSecurityGroupPostgresEgressBeta:
+    Type: AWS::EC2::SecurityGroupEgress
+    Condition: HasBeta
+    Properties:
+      GroupId: !Ref DbPairSecurityGroup
+      Description: Postgres
+      CidrIp: !Ref VpcBetaCidr
+      IpProtocol: tcp
+      FromPort: 5432
+      ToPort: 5432
+
+  DbPairSecurityGroupPostgresIngressBeta:
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: HasBeta
+    Properties:
+      GroupId: !Ref DbPairSecurityGroup
+      Description: Postgres
+      CidrIp: !Ref VpcBetaCidr
+      IpProtocol: tcp
+      FromPort: 5432
+      ToPort: 5432
+
+  DbPairSecurityGroupPostgresEgressGamma:
+    Type: AWS::EC2::SecurityGroupEgress
+    Condition: HasGamma
+    Properties:
+      GroupId: !Ref DbPairSecurityGroup
+      Description: Postgres
+      CidrIp: !Ref VpcGammaCidr
+      IpProtocol: tcp
+      FromPort: 5432
+      ToPort: 5432
+
+  DbPairSecurityGroupPostgresIngressGamma:
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: HasGamma
+    Properties:
+      GroupId: !Ref DbPairSecurityGroup
+      Description: Postgres
+      CidrIp: !Ref VpcGammaCidr
+      IpProtocol: tcp
+      FromPort: 5432
+      ToPort: 5432
+
+
+
+  #
+  # VPC PEERING ROUTES - TURBOT
+  #
+
+  TurbotSubnet1RouteAlphaToBeta:
+    Type: AWS::EC2::Route
+    Condition: RouteTurbotSubnet1AlphaToBeta
+    Properties:
+      RouteTableId: !Ref TurbotRouteTable1
+      DestinationCidrBlock: !Ref VpcBetaCidr
+      VpcPeeringConnectionId: !Ref VpcPeeringAlphaToBeta
+
+  TurbotSubnet2RouteAlphaToBeta:
+    Type: AWS::EC2::Route
+    Condition: RouteTurbotSubnet2AlphaToBeta
+    Properties:
+      RouteTableId: !Ref TurbotRouteTable2
+      DestinationCidrBlock: !Ref VpcBetaCidr
+      VpcPeeringConnectionId: !Ref VpcPeeringAlphaToBeta
+
+  TurbotSubnet3RouteAlphaToBeta:
+    Type: AWS::EC2::Route
+    Condition: RouteTurbotSubnet3AlphaToBeta
+    Properties:
+      RouteTableId: !Ref TurbotRouteTable3
+      DestinationCidrBlock: !Ref VpcBetaCidr
+      VpcPeeringConnectionId: !Ref VpcPeeringAlphaToBeta
+
+  TurbotSubnet1RouteBetaToAlpha:
+    Type: AWS::EC2::Route
+    Condition: RouteTurbotSubnet1BetaToAlpha
+    Properties:
+      RouteTableId: !Ref TurbotRouteTable1
+      DestinationCidrBlock: !Ref VpcAlphaCidr
+      VpcPeeringConnectionId: !Ref VpcPeeringAlphaToBetaId
+
+  TurbotSubnet2RouteBetaToAlpha:
+    Type: AWS::EC2::Route
+    Condition: RouteTurbotSubnet2BetaToAlpha
+    Properties:
+      RouteTableId: !Ref TurbotRouteTable2
+      DestinationCidrBlock: !Ref VpcAlphaCidr
+      VpcPeeringConnectionId: !Ref VpcPeeringAlphaToBetaId
+
+  TurbotSubnet3RouteBetaToAlpha:
+    Type: AWS::EC2::Route
+    Condition: RouteTurbotSubnet3BetaToAlpha
+    Properties:
+      RouteTableId: !Ref TurbotRouteTable3
+      DestinationCidrBlock: !Ref VpcAlphaCidr
+      VpcPeeringConnectionId: !Ref VpcPeeringAlphaToBetaId
+
+  TurbotSubnet1RouteAlphaToGamma:
+    Type: AWS::EC2::Route
+    Condition: RouteTurbotSubnet1AlphaToGamma
+    Properties:
+      RouteTableId: !Ref TurbotRouteTable1
+      DestinationCidrBlock: !Ref VpcGammaCidr
+      VpcPeeringConnectionId: !Ref VpcPeeringAlphaToGamma
+
+  TurbotSubnet2RouteAlphaToGamma:
+    Type: AWS::EC2::Route
+    Condition: RouteTurbotSubnet2AlphaToGamma
+    Properties:
+      RouteTableId: !Ref TurbotRouteTable2
+      DestinationCidrBlock: !Ref VpcGammaCidr
+      VpcPeeringConnectionId: !Ref VpcPeeringAlphaToGamma
+
+  TurbotSubnet3RouteAlphaToGamma:
+    Type: AWS::EC2::Route
+    Condition: RouteTurbotSubnet3AlphaToGamma
+    Properties:
+      RouteTableId: !Ref TurbotRouteTable3
+      DestinationCidrBlock: !Ref VpcGammaCidr
+      VpcPeeringConnectionId: !Ref VpcPeeringAlphaToGamma
+
+  TurbotSubnet1RouteGammaToAlpha:
+    Type: AWS::EC2::Route
+    Condition: RouteTurbotSubnet1GammaToAlpha
+    Properties:
+      RouteTableId: !Ref TurbotRouteTable1
+      DestinationCidrBlock: !Ref VpcAlphaCidr
+      VpcPeeringConnectionId: !Ref VpcPeeringAlphaToGammaId
+
+  TurbotSubnet2RouteGammaToAlpha:
+    Type: AWS::EC2::Route
+    Condition: RouteTurbotSubnet2GammaToAlpha
+    Properties:
+      RouteTableId: !Ref TurbotRouteTable2
+      DestinationCidrBlock: !Ref VpcAlphaCidr
+      VpcPeeringConnectionId: !Ref VpcPeeringAlphaToGammaId
+
+  TurbotSubnet3RouteGammaToAlpha:
+    Type: AWS::EC2::Route
+    Condition: RouteTurbotSubnet3GammaToAlpha
+    Properties:
+      RouteTableId: !Ref TurbotRouteTable3
+      DestinationCidrBlock: !Ref VpcAlphaCidr
+      VpcPeeringConnectionId: !Ref VpcPeeringAlphaToGammaId
+
+  TurbotSubnet1RouteBetaToGamma:
+    Type: AWS::EC2::Route
+    Condition: RouteTurbotSubnet1BetaToGamma
+    Properties:
+      RouteTableId: !Ref TurbotRouteTable1
+      DestinationCidrBlock: !Ref VpcGammaCidr
+      VpcPeeringConnectionId: !Ref VpcPeeringBetaToGamma
+
+  TurbotSubnet2RouteBetaToGamma:
+    Type: AWS::EC2::Route
+    Condition: RouteTurbotSubnet2BetaToGamma
+    Properties:
+      RouteTableId: !Ref TurbotRouteTable2
+      DestinationCidrBlock: !Ref VpcGammaCidr
+      VpcPeeringConnectionId: !Ref VpcPeeringBetaToGamma
+
+  TurbotSubnet3RouteBetaToGamma:
+    Type: AWS::EC2::Route
+    Condition: RouteTurbotSubnet3BetaToGamma
+    Properties:
+      RouteTableId: !Ref TurbotRouteTable3
+      DestinationCidrBlock: !Ref VpcGammaCidr
+      VpcPeeringConnectionId: !Ref VpcPeeringBetaToGamma
+
+  TurbotSubnet1RouteGammaToBeta:
+    Type: AWS::EC2::Route
+    Condition: RouteTurbotSubnet1GammaToBeta
+    Properties:
+      RouteTableId: !Ref TurbotRouteTable1
+      DestinationCidrBlock: !Ref VpcBetaCidr
+      VpcPeeringConnectionId: !Ref VpcPeeringBetaToGammaId
+
+  TurbotSubnet2RouteGammaToBeta:
+    Type: AWS::EC2::Route
+    Condition: RouteTurbotSubnet2GammaToBeta
+    Properties:
+      RouteTableId: !Ref TurbotRouteTable2
+      DestinationCidrBlock: !Ref VpcBetaCidr
+      VpcPeeringConnectionId: !Ref VpcPeeringBetaToGammaId
+
+  TurbotSubnet3RouteGammaToBeta:
+    Type: AWS::EC2::Route
+    Condition: RouteTurbotSubnet3GammaToBeta
+    Properties:
+      RouteTableId: !Ref TurbotRouteTable3
+      DestinationCidrBlock: !Ref VpcBetaCidr
+      VpcPeeringConnectionId: !Ref VpcPeeringBetaToGammaId
+
+
+  #
+  # VPC PEERING ROUTES - DATABASE
+  #
+
+  DatabaseSubnetsRouteAlphaToBeta:
+    Type: AWS::EC2::Route
+    Condition: RouteDatabaseSubnetsAlphaToBeta
+    Properties:
+      RouteTableId: !Ref DatabaseRouteTable
+      DestinationCidrBlock: !Ref VpcBetaCidr
+      VpcPeeringConnectionId: !Ref VpcPeeringAlphaToBeta
+
+  DatabaseSubnetsRouteAlphaToGamma:
+    Type: AWS::EC2::Route
+    Condition: RouteDatabaseSubnetsAlphaToGamma
+    Properties:
+      RouteTableId: !Ref DatabaseRouteTable
+      DestinationCidrBlock: !Ref VpcGammaCidr
+      VpcPeeringConnectionId: !Ref VpcPeeringAlphaToGamma
+
+  DatabaseSubnetsRouteBetaToAlpha:
+    Type: AWS::EC2::Route
+    Condition: RouteDatabaseSubnetsBetaToAlpha
+    Properties:
+      RouteTableId: !Ref DatabaseRouteTable
+      DestinationCidrBlock: !Ref VpcAlphaCidr
+      VpcPeeringConnectionId: !Ref VpcPeeringAlphaToBetaId
+
+  DatabaseSubnetsRouteBetaToGamma:
+    Type: AWS::EC2::Route
+    Condition: RouteDatabaseSubnetsBetaToGamma
+    Properties:
+      RouteTableId: !Ref DatabaseRouteTable
+      DestinationCidrBlock: !Ref VpcGammaCidr
+      VpcPeeringConnectionId: !Ref VpcPeeringBetaToGamma
+
+  DatabaseSubnetsRouteGammaToAlpha:
+    Type: AWS::EC2::Route
+    Condition: RouteDatabaseSubnetsGammaToAlpha
+    Properties:
+      RouteTableId: !Ref DatabaseRouteTable
+      DestinationCidrBlock: !Ref VpcAlphaCidr
+      VpcPeeringConnectionId: !Ref VpcPeeringAlphaToGammaId
+
+  DatabaseSubnetsRouteGammaToBeta:
+    Type: AWS::EC2::Route
+    Condition: RouteDatabaseSubnetsGammaToBeta
+    Properties:
+      RouteTableId: !Ref DatabaseRouteTable
+      DestinationCidrBlock: !Ref VpcBetaCidr
+      VpcPeeringConnectionId: !Ref VpcPeeringBetaToGammaId
+
+  #
+  # ECS EC2
+  #
+
+  ECSEC2LaunchConfig:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    DependsOn:
+      - NetworkParametersStack
+      - TefNetworkParameters
+      - TefIamParameters
+    Properties:
+      # Don't put custom name or you won't be able to change the instance type
+      # LaunchConfigurationName: !Sub "${ResourceNamePrefix}-launch-configuration"
+      # https://docs.aws.amazon.com/AmazonECS/latest/developerguide/ecs-optimized_AMI.html
+      # get from ssm: /aws/service/ecs/optimized-ami/amazon-linux-2/recommended/image_id
+      ImageId: !Ref ECSAMI
+      InstanceType: !Ref InstanceType
+      IamInstanceProfile: !Select [1, !Split [ "/", !GetAtt [TefIamParameters, ec2_instance_profile]]]
+      AssociatePublicIpAddress: false
+      SecurityGroups:
+        - !GetAtt ApiServiceSecurityGroupParameter.Value
+        - !GetAtt OutboundInternetSecurityGroupParameter.Value
+        - !GetAtt DatabaseSecurityGroupParameter.Value
+        - !GetAtt [TefNetworkParameters, internal_services_security_group]
+        - !If
+          - UseElastiCache
+          - !GetAtt [TefNetworkParameters, cache_pair_security_group]
+          - !Ref "AWS::NoValue"
+
+      #  https://docs.aws.amazon.com/AmazonECS/latest/developerguide/http_proxy_config.html
+      UserData: !If
+        - HasHttpsProxy
+        - Fn::Base64: !Sub
+          - |
+            #cloud-boothook
+            # Configure Yum, the Docker daemon, and the ECS agent to use an HTTP proxy
+            #
+
+            # Specify proxy host, port number, and ECS cluster name to use
+            HTTP_PROXY_HOST_AND_PORT=${HttpProxyHostAndPort}
+            HTTPS_PROXY_HOST_AND_PORT=${HttpsProxyHostAndPort}
+
+            CLUSTER_NAME=${ResourceNamePrefix}
+
+            export HTTP_PROXY=${HttpProxyProtocol}//$HTTP_PROXY_HOST_AND_PORT
+            export HTTPS_PROXY=${HttpsProxyProtocol}//$HTTPS_PROXY_HOST_AND_PORT
+            export NO_PROXY=169.254.169.254,169.254.170.2
+
+            if grep -q 'Amazon Linux release 2' /etc/system-release ; then
+                OS=AL2
+                echo "Setting OS to Amazon Linux 2"
+            elif grep -q 'Amazon Linux AMI' /etc/system-release ; then
+                OS=ALAMI
+                echo "Setting OS to Amazon Linux AMI"
+            else
+                echo "This user data script only supports Amazon Linux 2 and Amazon Linux AMI."
+            fi
+
+            # Set Yum HTTP proxy
+            if [ ! -f /var/lib/cloud/instance/sem/config_yum_http_proxy ]; then
+                echo "proxy=${HttpProxyProtocol}//$HTTP_PROXY_HOST_AND_PORT" >> /etc/yum.conf
+                echo "$$: $(date +%s.%N | cut -b1-13)" > /var/lib/cloud/instance/sem/config_yum_http_proxy
+            fi
+
+            # Set Docker HTTP proxy (different methods for Amazon Linux 2 and Amazon Linux AMI)
+            # Amazon Linux 2
+            if [ $OS == "AL2" ] && [ ! -f /var/lib/cloud/instance/sem/config_docker_http_proxy ]; then
+                mkdir /etc/systemd/system/docker.service.d
+                cat <<EOF > /etc/systemd/system/docker.service.d/http-proxy.conf
+            [Service]
+            Environment="HTTP_PROXY=${HttpProxyProtocol}//$HTTP_PROXY_HOST_AND_PORT/"
+            Environment="HTTPS_PROXY=${HttpsProxyProtocol}//$HTTPS_PROXY_HOST_AND_PORT/"
+            Environment="NO_PROXY=169.254.169.254,169.254.170.2"
+            EOF
+                systemctl daemon-reload
+                if [ "$(systemctl is-active docker)" == "active" ]
+                then
+                  systemctl restart docker.service
+                fi
+                echo "$$: $(date +%s.%N | cut -b1-13)" > /var/lib/cloud/instance/sem/config_docker_http_proxy
+            fi
+            # Amazon Linux AMI
+            if [ $OS == "ALAMI" ] && [ ! -f /var/lib/cloud/instance/sem/config_docker_http_proxy ]; then
+                echo "export HTTP_PROXY=${HttpProxyProtocol}//$HTTP_PROXY_HOST_AND_PORT/" >> /etc/sysconfig/docker
+                echo "export HTTPS_PROXY=${HttpsProxyProtocol}//$HTTPS_PROXY_HOST_AND_PORT/" >> /etc/sysconfig/docker
+                echo "export NO_PROXY=169.254.169.254,169.254.170.2" >> /etc/sysconfig/docker
+                echo "$$: $(date +%s.%N | cut -b1-13)" > /var/lib/cloud/instance/sem/config_docker_http_proxy
+            fi
+
+            # Set ECS agent HTTP proxy
+            if [ ! -f /var/lib/cloud/instance/sem/config_ecs-agent_http_proxy ]; then
+                cat <<EOF > /etc/ecs/ecs.config
+            ECS_CLUSTER=$CLUSTER_NAME
+            HTTP_PROXY=$HTTP_PROXY_HOST_AND_PORT
+            NO_PROXY=169.254.169.254,169.254.170.2,/var/run/docker.sock
+            EOF
+                echo "$$: $(date +%s.%N | cut -b1-13)" > /var/lib/cloud/instance/sem/config_ecs-agent_http_proxy
+            fi
+
+            # set ECS image pull do not forget to set the other block of user data
+            echo ECS_IMAGE_PULL_BEHAVIOR=${ImagePullBehaviour} >> /etc/ecs/ecs.config
+
+            # Set ecs-init HTTP proxy (different methods for Amazon Linux 2 and Amazon Linux AMI)
+            # Amazon Linux 2
+            if [ $OS == "AL2" ] && [ ! -f /var/lib/cloud/instance/sem/config_ecs-init_http_proxy ]; then
+                mkdir /etc/systemd/system/ecs.service.d
+                cat <<EOF > /etc/systemd/system/ecs.service.d/http-proxy.conf
+            [Service]
+            Environment="HTTP_PROXY=$HTTP_PROXY_HOST_AND_PORT/"
+            Environment="NO_PROXY=169.254.169.254,169.254.170.2,/var/run/docker.sock"
+            EOF
+                systemctl daemon-reload
+                if [ "$(systemctl is-active ecs)" == "active" ]; then
+                    systemctl restart ecs
+                fi
+                echo "$$: $(date +%s.%N | cut -b1-13)" > /var/lib/cloud/instance/sem/config_ecs-init_http_proxy
+            fi
+            # Amazon Linux AMI
+            if [ $OS == "ALAMI" ] && [ ! -f /var/lib/cloud/instance/sem/config_ecs-init_http_proxy ]; then
+                cat <<EOF > /etc/init/ecs.override
+            env HTTP_PROXY=$HTTP_PROXY_HOST_AND_PORT
+            env NO_PROXY=169.254.169.254,169.254.170.2,/var/run/docker.sock
+            EOF
+                echo "$$: $(date +%s.%N | cut -b1-13)" > /var/lib/cloud/instance/sem/config_ecs-init_http_proxy
+            fi
+
+          - HttpProxyProtocol: !Select
+              - 0
+              - !Split ['/', !Ref HttpProxy]
+            HttpProxyHostAndPort: !Select
+              - 2
+              - !Split ['/', !Ref HttpProxy]
+            HttpsProxyProtocol: !Select
+              - 0
+              - !Split ['/', !Ref HttpsProxy]
+            HttpsProxyHostAndPort: !Select
+              - 2
+              - !Split ['/', !Ref HttpsProxy]
+            ImagePullBehaviour: !If
+              - IsDevelopmentMode
+              - "always"
+              - "prefer-cached"
+
+            # NoProxy: !Ref NoProxy
+        - Fn::Base64: !Sub
+          - |
+            #!/bin/bash
+
+            # Add ECS_CLUSTER to the ecs.config file, ECS requirement
+            echo ECS_CLUSTER=${ResourceNamePrefix} >> /etc/ecs/ecs.config
+
+            # set ECS image pull do not forget to set the other block of user data
+            echo ECS_IMAGE_PULL_BEHAVIOR=${ImagePullBehaviour} >> /etc/ecs/ecs.config
+          # Seems to need this, figure out how to unpack with !Sub and |
+          - ImagePullBehaviour: !If
+            - IsDevelopmentMode
+            - "always"
+            - "prefer-cached"
+
+  ECSEC2AutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    UpdatePolicy:
+      AutoScalingRollingUpdate:
+        MinInstancesInService: 1
+        MaxBatchSize: 4
+        PauseTime: PT5M
+        SuspendProcesses:
+          - HealthCheck
+          - ReplaceUnhealthy
+          - AZRebalance
+          - AlarmNotification
+          - ScheduledActions
+    Properties:
+      AutoScalingGroupName: !Sub "${ResourceNamePrefix}-auto-scaling-group"
+      # Specifies where the instances will be created
+      VPCZoneIdentifier: !Split [",", !GetAtt TurbotSubnetIdsParameter.Value]
+      LaunchConfigurationName: !Ref ECSEC2LaunchConfig
+      MinSize: !Ref ECSMinInstanceCount
+      MaxSize: !Ref ECSMaxInstanceCount
+      DesiredCapacity: !Ref ECSMinInstanceCount
+      Tags:
+        - Key: Name
+          Value: !Sub "${ResourceNamePrefix} ECS Host"
+          PropagateAtLaunch: true
+        - Key: ECS Cluster
+          Value: !Sub "${ResourceNamePrefix}"
+          PropagateAtLaunch: true
+        - Key: Vendor
+          Value: !FindInMap [Constants, Turbot, EntityName]
+          PropagateAtLaunch: true
+        - Key: Product
+          Value: !FindInMap [Constants, Product, Name]
+          PropagateAtLaunch: true
+
+  ECSEC2CPUPolicy:
+    Type: AWS::AutoScaling::ScalingPolicy
+    Properties:
+      AutoScalingGroupName: !Ref ECSEC2AutoScalingGroup
+      PolicyType: TargetTrackingScaling
+      EstimatedInstanceWarmup: 120
+      TargetTrackingConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ASGAverageCPUUtilization
+        TargetValue: !Ref AutoScalingTargetCPU
+
+  EcsCluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: !Sub "${ResourceNamePrefix}"
+
+  #
+  # EVENTS GATEWAY
+  #
+
+  ApiGatewayRestApi:
+    Type: "AWS::ApiGateway::RestApi"
+    Condition: ApiGatewayEnabled
+    Properties:
+      Name: !Sub "${ResourceNamePrefix}-api"
+      Description: "Turbot API for realtime events"
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
+
+  ApiResource:
+    Type: AWS::ApiGateway::Resource
+    Condition: ApiGatewayEnabled
+    Properties:
+      ParentId: !GetAtt ApiGatewayRestApi.RootResourceId
+      PathPart: "api"
+      RestApiId: !Ref ApiGatewayRestApi
+
+  V5Resource:
+    Type: AWS::ApiGateway::Resource
+    Condition: ApiGatewayEnabled
+    Properties:
+      ParentId: !Ref ApiResource
+      PathPart: "v5"
+      RestApiId: !Ref ApiGatewayRestApi
+
+  EventsResource:
+    Type: AWS::ApiGateway::Resource
+    Condition: ApiGatewayEnabled
+    Properties:
+      ParentId: !Ref V5Resource
+      PathPart: "events"
+      RestApiId: !Ref ApiGatewayRestApi
+
+  RawResource:
+    Type: AWS::ApiGateway::Resource
+    Condition: ApiGatewayEnabled
+    Properties:
+      ParentId: !Ref EventsResource
+      PathPart: 'raw'
+      RestApiId: !Ref ApiGatewayRestApi
+
+  ProxyMethod:
+      Type: AWS::ApiGateway::Method
+      Condition: ApiGatewayEnabled
+      Properties:
+        ResourceId: !Ref RawResource
+        RestApiId: !Ref ApiGatewayRestApi
+        AuthorizationType: NONE
+        HttpMethod: POST
+        # HttpMethod: GET               # GET for testing - should be POST
+        Integration:
+          IntegrationHttpMethod: POST
+          Type: "AWS_PROXY"
+          Uri: !Sub "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${EventProxyLambda.Arn}/invocations"
+
+  TurbotApiResource:
+    Type: AWS::ApiGateway::Resource
+    Condition: ApiGatewayEnabled
+    Properties:
+      ParentId: !Ref V5Resource
+      PathPart: "turbot"
+      RestApiId: !Ref ApiGatewayRestApi
+
+  HealthApiResource:
+    Type: AWS::ApiGateway::Resource
+    Condition: ApiGatewayEnabled
+    Properties:
+      ParentId: !Ref TurbotApiResource
+      PathPart: 'health'
+      RestApiId: !Ref ApiGatewayRestApi
+
+  HealthProxyMethod:
+      Type: AWS::ApiGateway::Method
+      Condition: ApiGatewayEnabled
+      Properties:
+        ResourceId: !Ref HealthApiResource
+        RestApiId: !Ref ApiGatewayRestApi
+        AuthorizationType: NONE
+        HttpMethod: GET
+        Integration:
+          IntegrationHttpMethod: POST
+          Type: "AWS_PROXY"
+          Uri: !Sub "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${HealthCheckProxyLambda.Arn}/invocations"
+
+  ApiCustomDomainName:
+    Type: 'AWS::ApiGateway::DomainName'
+    Condition: ApiGatewayEnabled
+    Properties:
+      DomainName: !Sub "gateway.${InstallationDomain}"
+      RegionalCertificateArn: !Ref TurbotCertificateArn
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
+
+  ApiBasePathMapping:
+    DependsOn: ApiDeployment2
+    Condition: ApiGatewayEnabled
+    Type: 'AWS::ApiGateway::BasePathMapping'
+    Properties:
+      DomainName: !Ref ApiCustomDomainName
+      RestApiId: !Ref ApiGatewayRestApi
+      Stage: !Ref ResourceNamePrefix
+
+  ApiDnsHealthCheck:
+    Type: "AWS::Route53::HealthCheck"
+    Condition: ManageApiGatewayInRoute53
+    Properties:
+      HealthCheckConfig:
+        Port: "443"
+        Type: "HTTPS_STR_MATCH"
+        SearchString: "OK"
+        ResourcePath: !Sub "/${ResourceNamePrefix}/api/v5/turbot/health"       #change this to real healtcheck page
+        FullyQualifiedDomainName: !Sub "${ApiGatewayRestApi}.execute-api.${AWS::Region}.amazonaws.com"
+        RequestInterval: "10"   # short for testing...
+        FailureThreshold: "2"
+      HealthCheckTags:
+        - Key: "Name"
+          Value: !Sub "${ResourceNamePrefix}-api-${AWS::Region}"
+
+  ApiCustomDNSRecord:
+    Type: AWS::Route53::RecordSet
+    Condition: ManageApiGatewayInRoute53
+    Properties:
+      Region: !Ref AWS::Region
+      HealthCheckId: !Ref ApiDnsHealthCheck
+      SetIdentifier: !Sub "${ResourceNamePrefix}-api-${AWS::Region}"
+      AliasTarget:
+        DNSName: !GetAtt ApiCustomDomainName.RegionalDomainName
+        EvaluateTargetHealth: true
+        HostedZoneId: !GetAtt ApiCustomDomainName.RegionalHostedZoneId
+      HostedZoneName: !Sub "${InstallationDomain}."
+      Comment: DNS name for turbot events API gateway.
+      Name: !Sub "gateway.${InstallationDomain}"
+      Type: A
+
+
+  ApiDeployment2:
+    Type: "AWS::ApiGateway::Deployment"
+    Condition: ApiGatewayEnabled
+    DependsOn: ProxyMethod
+    Properties:
+      Description: !Sub "${ResourceNamePrefix} deployment via CloudFormation stack ${AWS::StackName}"
+      RestApiId: !Ref ApiGatewayRestApi
+      StageName: !Ref ResourceNamePrefix
+
+  EventProxyLambda:
+    Type: "AWS::Lambda::Function"
+    Condition: ApiGatewayEnabled
+    DependsOn:
+      - TefIamParameters
+    Properties:
+      Code:
+        S3Bucket: !Sub
+          - "turbot-software-${ReleasePhase}-${Region}"
+          - ReleasePhase: !Ref ReleasePhase
+            Region: !Ref "AWS::Region"
+        S3Key: !Sub
+          - "tef/${Version}/turbot-events-proxy.zip"
+          - Version: !FindInMap [Constants, Product, Version]
+      Description: "Turbot API Event Proxy"
+      FunctionName: !Sub "${ResourceNamePrefix}_event_proxy"
+      Handler: "index.handler"
+      Runtime: nodejs14.x
+      MemorySize: 1024
+      Role: !GetAtt [TefIamParameters, event_proxy_execution_role]
+      Timeout: 20
+      VpcConfig:
+        SecurityGroupIds:
+          - !GetAtt OutboundInternetSecurityGroupParameter.Value
+        SubnetIds: !If
+          - HasPredefinedVpc
+          - !Ref PredefinedPublicSubnetIds
+          - !If
+            - HasPublicSubnets
+            - - !Ref PublicSubnet1
+              - !If [ HasPublicSubnet2, !Ref PublicSubnet2, !Ref "AWS::NoValue" ]
+              - !If [ HasPublicSubnet3, !Ref PublicSubnet3, !Ref "AWS::NoValue" ]
+            - - !Ref TurbotSubnet1
+              - !If [ HasTurbotSubnet2, !Ref TurbotSubnet2, !Ref "AWS::NoValue" ]
+              - !If [ HasTurbotSubnet3, !Ref TurbotSubnet3, !Ref "AWS::NoValue" ]
+
+      Tags:
+        - Key: Vendor
+          Value: !FindInMap [Constants, Turbot, EntityName]
+        - Key: Product
+          Value: !FindInMap [Constants, Product, Name]
+      Environment:
+        Variables:
+          HTTP_PROXY: !If [ HasHttpProxy, !Ref HttpProxy, "" ]
+          http_proxy: !If [ HasHttpProxy, !Ref HttpProxy, "" ]
+          HTTPS_PROXY: !If [ HasHttpsProxy, !Ref HttpsProxy, "" ]
+          https_proxy: !If [ HasHttpsProxy, !Ref HttpsProxy, "" ]
+          NO_PROXY: !If [ HasNoProxy, !Ref NoProxy, "" ]
+          no_proxy: !If [ HasNoProxy, !Ref NoProxy, "" ]
+          NODE_TLS_REJECT_UNAUTHORIZED: !If [ UseSelfSignedCertificateInALB, "0", "" ]
+
+  EventProxylambdaApiGatewayInvoke:
+    Type: "AWS::Lambda::Permission"
+    Condition: ApiGatewayEnabled
+    Properties:
+      Action: "lambda:InvokeFunction"
+      FunctionName: !GetAtt "EventProxyLambda.Arn"
+      Principal: "apigateway.amazonaws.com"
+      SourceArn: !Sub "arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGatewayRestApi}/*"
+
+  HealthCheckProxyLambda:
+    Type: "AWS::Lambda::Function"
+    Condition: ApiGatewayEnabled
+    DependsOn:
+      - TefIamParameters
+    Properties:
+      Code:
+        ZipFile: |
+          import os
+          import json
+          def handler(event,context):
+            print(json.dumps(event))
+            return {
+              'body': 'Source IP: {0}\nRegion: {1}\nStatus: {2}\n'.format(
+                  event.get('requestContext', {}).get('identity', {}).get('sourceIp'),
+                  os.environ.get('AWS_REGION'),
+                  os.environ.get('STATUS')),
+              'headers': {
+                'Content-Type': 'text/plain'
+              },
+              'statusCode': 200
+            }
+      Runtime: "python3.8"
+      Description: "Turbot API Health Check Proxy"
+      FunctionName: !Sub "${ResourceNamePrefix}_healthcheck_proxy"
+      Handler: "index.handler"
+      MemorySize: 1024
+      Role: !GetAtt [TefIamParameters, health_check_proxy_execution_role]
+      Timeout: 20
+      VpcConfig:
+        SecurityGroupIds:
+          - !GetAtt OutboundInternetSecurityGroupParameter.Value
+        SubnetIds: !If
+          - HasPredefinedVpc
+          - !Ref PredefinedTurbotSubnetIds
+          - - !Ref TurbotSubnet1
+            - !If [ HasTurbotSubnet2, !Ref TurbotSubnet2, !Ref "AWS::NoValue" ]
+            - !If [ HasTurbotSubnet3, !Ref TurbotSubnet3, !Ref "AWS::NoValue" ]
+      Tags:
+        - Key: Vendor
+          Value: !FindInMap [Constants, Turbot, EntityName]
+        - Key: Product
+          Value: !FindInMap [Constants, Product, Name]
+      Environment:
+        Variables:
+          HTTP_PROXY: !If [ HasHttpProxy, !Ref HttpProxy, "" ]
+          http_proxy: !If [ HasHttpProxy, !Ref HttpProxy, "" ]
+          HTTPS_PROXY: !If [ HasHttpsProxy, !Ref HttpsProxy, "" ]
+          https_proxy: !If [ HasHttpsProxy, !Ref HttpsProxy, "" ]
+          NO_PROXY: !If [ HasNoProxy, !Ref NoProxy, "" ]
+          no_proxy: !If [ HasNoProxy, !Ref NoProxy, "" ]
+          NODE_TLS_REJECT_UNAUTHORIZED: !If [ AllowUseOfSelfSignedCertificate, "0", "" ]
+
+  HealthCheckProxylambdaApiGatewayInvoke:
+    Type: "AWS::Lambda::Permission"
+    Condition: ApiGatewayEnabled
+    Properties:
+      Action: "lambda:InvokeFunction"
+      FunctionName: !GetAtt "HealthCheckProxyLambda.Arn"
+      Principal: "apigateway.amazonaws.com"
+      SourceArn: !Sub "arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGatewayRestApi}/*"
+
+  #
+  # Connectivity Test
+  #
+
+  ConnectivityChecker:
+    Type: AWS::Lambda::Function
+    DependsOn:
+      - TefIamParameters
+    Properties:
+      FunctionName: !Sub "${ResourceNamePrefix}_connectivity_checker"
+      Runtime: nodejs14.x
+      Role: !GetAtt [TefIamParameters, connectivity_checker_role]
+      Handler: index.handler
+      MemorySize: 1024
+      Code:
+        S3Bucket: !Sub
+          - "turbot-software-${ReleasePhase}-${Region}"
+          - ReleasePhase: !Ref ReleasePhase
+            Region: !Ref "AWS::Region"
+        S3Key: !Sub
+          - "tef/${Version}/turbot-connectivity-checker.zip"
+          - Version: !FindInMap [Constants, Product, Version]
+      Description: Turbot Connectivity Check
+      VpcConfig:
+        SecurityGroupIds:
+          - !GetAtt OutboundInternetSecurityGroupParameter.Value
+        SubnetIds: !If
+          - HasPredefinedVpc
+          - !Ref PredefinedTurbotSubnetIds
+          -
+            - !Ref TurbotSubnet1
+            - !If [ HasTurbotSubnet2, !Ref TurbotSubnet2, !Ref "AWS::NoValue" ]
+            - !If [ HasTurbotSubnet3, !Ref TurbotSubnet3, !Ref "AWS::NoValue" ]
+      Timeout: 300
+      Environment:
+        Variables:
+          TURBOT_LOG_BUCKET: !GetAtt LogBucketNameParameter.Value
+          TURBOT_LAMBDA_RUNNABLE_DEAD_LETTER_QUEUE: !GetAtt LambdaRunnableDeadLetterQueue.QueueName
+          TURBOT_FOUNDATION_KEY_ID: !Ref FoundationKey
+          TURBOT_ALPHA_REGION_PARAMETER: !Ref AlphaRegionParameter
+          HTTP_PROXY: !If [ HasHttpProxy, !Ref HttpProxy, "" ]
+          http_proxy: !If [ HasHttpProxy, !Ref HttpProxy, "" ]
+          HTTPS_PROXY: !If [ HasHttpsProxy, !Ref HttpsProxy, "" ]
+          https_proxy: !If [ HasHttpsProxy, !Ref HttpsProxy, "" ]
+          NO_PROXY: !If [ HasNoProxy, !Ref NoProxy, "" ]
+          no_proxy: !If [ HasNoProxy, !Ref NoProxy, "" ]
+          NODE_TLS_REJECT_UNAUTHORIZED: !If [ AllowUseOfSelfSignedCertificate, "0", "" ]
+
+  #
+  # S3 Bucket Arns
+  #
+
+  S3BucketArnLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub
+        - "/aws/lambda/${ResourceNamePrefix}_s3_bucket_arns"
+        - ResourceNamePrefix: !Ref ResourceNamePrefix
+          SafeVersion: !Join [ "_", !Split [ ".", !Join [ "_", !Split [ "-", !FindInMap [Constants, Product, Version] ] ] ] ]
+      RetentionInDays: !Ref LogRetentionDays
+
+  S3BucketArnLambda:
+    Type: AWS::Lambda::Function
+    DependsOn:
+      - S3BucketArnLogGroup
+    Properties:
+      FunctionName: !Sub "${ResourceNamePrefix}_s3_bucket_arns"
+      Runtime: nodejs14.x
+      Role: !If
+        - CreateS3BucketArnRole
+        - !GetAtt S3BucketArnRole.Arn
+        - !Ref S3BucketArnRoleArn
+      Handler: index.handler
+      MemorySize: 1024
+      Code:
+        S3Bucket: !Sub
+          - "turbot-software-${ReleasePhase}-${Region}"
+          - ReleasePhase: !Ref ReleasePhase
+            Region: !Ref "AWS::Region"
+        S3Key: !Sub
+          - "tef/${Version}/turbot-s3-bucket-arns.zip"
+          - Version: !FindInMap [Constants, Product, Version]
+      Description: Turbot S3 Bucket Arn
+      Timeout: 60
+      VpcConfig:
+        SecurityGroupIds:
+          - !GetAtt OutboundInternetSecurityGroupParameter.Value
+        SubnetIds: !If
+          - HasPredefinedVpc
+          - !Ref PredefinedTurbotSubnetIds
+          -
+            - !Ref TurbotSubnet1
+            - !If [ HasTurbotSubnet2, !Ref TurbotSubnet2, !Ref "AWS::NoValue" ]
+            - !If [ HasTurbotSubnet3, !Ref TurbotSubnet3, !Ref "AWS::NoValue" ]
+      Tags:
+        - Key: Vendor
+          Value: !FindInMap [Constants, Turbot, EntityName]
+        - Key: Product
+          Value: !FindInMap [Constants, Product, Name]
+      Environment:
+        Variables:
+          TURBOT_PREFIX: !Ref ResourceNamePrefix
+          TURBOT_RELEASE_PHASE: !Ref ReleasePhase
+          TURBOT_REGIONS: !Join
+            - ","
+            -
+              - !If [ HasAlpha, !Ref VpcAlphaRegion, !Ref "AWS::NoValue" ]
+              - !If [ HasBeta,  !Ref VpcBetaRegion,  !Ref "AWS::NoValue" ]
+              - !If [ HasGamma, !Ref VpcGammaRegion, !Ref "AWS::NoValue" ]
+          BUCKET_SUFFIX: !If
+            - IsDynamicLogBucketName
+            - !Select
+              - 0
+              - !Split
+                - "-"
+                - !Select
+                  - 2
+                  - !Split
+                    - "/"
+                    - !Ref "AWS::StackId"
+            - ""
+          HTTP_PROXY: !If [ HasHttpProxy, !Ref HttpProxy, "" ]
+          http_proxy: !If [ HasHttpProxy, !Ref HttpProxy, "" ]
+          HTTPS_PROXY: !If [ HasHttpsProxy, !Ref HttpsProxy, "" ]
+          https_proxy: !If [ HasHttpsProxy, !Ref HttpsProxy, "" ]
+          NO_PROXY: !If [ HasNoProxy, !Ref NoProxy, "" ]
+          no_proxy: !If [ HasNoProxy, !Ref NoProxy, "" ]
+          AWS_ACCOUNT_ID: !Ref "AWS::AccountId"
+
+  S3BucketArnRole:
+    Type: AWS::IAM::Role
+    Condition: CreateS3BucketArnRole
+    Properties:
+      RoleName: !Sub
+        - "${ResourceNamePrefix}_s3_bucket_arn_${Region}"
+        - Region: !Join [ "_", !Split [ "-", !Ref "AWS::Region" ] ]
+      Path: /
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+            - sts:AssumeRole
+      Policies:
+        - PolicyName: AllowReadAccessForSSM
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Sid: SSMParameter
+                Effect: Allow
+                Action:
+                  - ssm:GetParametersByPath
+                  - ssm:GetParameters
+                Resource: !Sub "arn:${AWS::Partition}:ssm:*:${AWS::AccountId}:parameter/${ResourceNamePrefix}/*"
+
+              - Sid: EC2Instance
+                Effect: Allow
+                Action:
+                  - ec2:DescribeNetworkInterfaces
+                  - ec2:CreateNetworkInterface
+                  - ec2:DeleteNetworkInterface
+                Resource: "*"
+
+              - Sid: LogsPolicy
+                Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource:
+                  - !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${ResourceNamePrefix}_s3_bucket_arns
+                  - !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${ResourceNamePrefix}_s3_bucket_arns:log-stream:*
+
+  #
+  # Preinstallation
+  #
+
+  PreinstallCheckLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    Properties:
+      LogGroupName: !Sub
+        - "/aws/lambda/${ResourceNamePrefix}_preinstall_checker"
+        - ResourceNamePrefix: !Ref ResourceNamePrefix
+          SafeVersion: !Join [ "_", !Split [ ".", !Join [ "_", !Split [ "-", !FindInMap [Constants, Product, Version] ] ] ] ]
+      RetentionInDays: !Ref LogRetentionDays
+
+  PreinstallChecker:
+    Type: AWS::Lambda::Function
+    DependsOn:
+      - PreinstallCheckLogGroup
+      - TefIamParameters
+    Properties:
+      FunctionName: !Sub "${ResourceNamePrefix}_preinstall_checker"
+      Runtime: nodejs14.x
+      Role: !GetAtt [TefIamParameters, preinstall_checker_role]
+      Handler: index.handler
+      MemorySize: 1024
+      Code:
+        S3Bucket: !Sub
+          - "turbot-software-${ReleasePhase}-${Region}"
+          - ReleasePhase: !Ref ReleasePhase
+            Region: !Ref "AWS::Region"
+        S3Key: !Sub
+          - "tef/${Version}/turbot-preinstallation-checker.zip"
+          - Version: !FindInMap [Constants, Product, Version]
+      Description: Turbot Preinstallation Check
+      Timeout: 60
+      VpcConfig:
+        SecurityGroupIds:
+          - !GetAtt OutboundInternetSecurityGroupParameter.Value
+        SubnetIds: !If
+          - HasPredefinedVpc
+          - !Ref PredefinedTurbotSubnetIds
+          -
+            - !Ref TurbotSubnet1
+            - !If [ HasTurbotSubnet2, !Ref TurbotSubnet2, !Ref "AWS::NoValue" ]
+            - !If [ HasTurbotSubnet3, !Ref TurbotSubnet3, !Ref "AWS::NoValue" ]
+      Tags:
+        - Key: Vendor
+          Value: !FindInMap [Constants, Turbot, EntityName]
+        - Key: Product
+          Value: !FindInMap [Constants, Product, Name]
+      Environment:
+        Variables:
+          TURBOT_PREFIX: !Ref ResourceNamePrefix
+          HTTP_PROXY: !If [ HasHttpProxy, !Ref HttpProxy, "" ]
+          http_proxy: !If [ HasHttpProxy, !Ref HttpProxy, "" ]
+          HTTPS_PROXY: !If [ HasHttpsProxy, !Ref HttpsProxy, "" ]
+          https_proxy: !If [ HasHttpsProxy, !Ref HttpsProxy, "" ]
+          NO_PROXY: !If [ HasNoProxy, !Ref NoProxy, "" ]
+          no_proxy: !If [ HasNoProxy, !Ref NoProxy, "" ]
+
+  #
+  # Nested Stacks
+  #
+  NetworkParametersStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub
+        - https://turbot-software-${ReleasePhase}-${AWS::Region}.${S3Domain}.${AWS::URLSuffix}/tef/${Version}/params-network.yml
+        - Version: !FindInMap [Constants, Product, Version]
+          S3Domain: !If
+            - IsUsEast1
+            - s3
+            - !Sub s3-${AWS::Region}
+
+      Parameters:
+        ResourceNamePrefix: !Ref ResourceNamePrefix
+        AlbLogPrefix: !Sub ${ResourceNamePrefix}_{% TE_VERSION_SAFE %}/alb
+        AlbIdleTimeout: "120"
+        Vendor: !FindInMap [Constants, Turbot, EntityName]
+        Product: !FindInMap [Constants, Product, Name]
+        DevelopmentMode: !Ref DevelopmentMode
+        UseElastiCache: !Ref UseElastiCache
+        VpcId: !If
+          - HasPredefinedVpc
+          - !Ref PredefinedVpcId
+          - !Ref TurbotVpc
+        VpcAlphaRegion: !Ref VpcAlphaRegion
+        VpcAlphaCidr: !Ref VpcAlphaCidr
+        VpcBetaRegion: !Ref VpcBetaRegion
+        VpcBetaCidr: !Ref VpcBetaCidr
+        VpcGammaRegion: !Ref VpcGammaRegion
+        VpcGammaCidr: !Ref VpcGammaCidr
+        SubnetIdsParameter: !GetAtt DatabaseSubnetIdsParameter.Value
+        OSGuardrails: !Ref OSGuardrails
+        LdapServerCidr: !Ref LdapServerCidr
+
+  IamParametersStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub
+        - https://turbot-software-${ReleasePhase}-${AWS::Region}.${S3Domain}.${AWS::URLSuffix}/tef/${Version}/params-iam.yml
+        - Version: !FindInMap [Constants, Product, Version]
+          S3Domain: !If
+            - IsUsEast1
+            - s3
+            - !Sub s3-${AWS::Region}
+      Parameters:
+        ResourceNamePrefix: !Ref ResourceNamePrefix
+        RoleCreationScheme: !Ref RoleCreationScheme
+        VpcAlphaRegion: !Ref VpcAlphaRegion
+        LambdaRunnableDeadLetterQueueArn: !GetAtt LambdaRunnableDeadLetterQueue.Arn
+        LogBucketArn: !GetAtt LogBucket.Arn
+        FoundationKeyArn: !GetAtt FoundationKey.Arn
+        ParentStackId: !Select [0, !Split ["-", !Select [2, !Split ["/", !Ref "AWS::StackId"]]]]
+        CreateApiGateway: !Ref CreateApiGateway
+        PortfolioAccount: !If
+          - IsGovCloud
+          - !FindInMap [Constants, Portfolio, GovCloudAccountId]
+          - !FindInMap [Constants, Portfolio, AccountId]
+        ReleasePhase: !Ref ReleasePhase
+        RunnableRoleInRegion: !Sub
+          - arn:${AWS::Partition}:iam::${AWS::AccountId}:role/${ResourceNamePrefix}_runnable_${Region}
+          - Region: !Join [ "_", !Split [ "-", !Ref "AWS::Region" ] ]
+        RunnableInVpcRoleInRegion: !Sub
+          - arn:${AWS::Partition}:iam::${AWS::AccountId}:role/${ResourceNamePrefix}_runnable_in_vpc_${Region}
+          - Region: !Join [ "_", !Split [ "-", !Ref "AWS::Region" ] ]
+        BucketArn: !GetAtt [S3BucketArnList, "_log_process-log_"]
+        BucketArnTemp: !GetAtt [S3BucketArnList, "_log_process-log_/temp/*_"]
+
+  ParametersStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub
+        - https://turbot-software-${ReleasePhase}-${AWS::Region}.${S3Domain}.${AWS::URLSuffix}/tef/${Version}/params.yml
+        - Version: !FindInMap [Constants, Product, Version]
+          S3Domain: !If
+            - IsUsEast1
+            - s3
+            - !Sub s3-${AWS::Region}
+      Parameters:
+        ResourceNamePrefix: !Ref ResourceNamePrefix
+        OrganizationId: "{% NULL %}"
+
+  TurbotParametersLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    Properties:
+      LogGroupName: !Sub
+        - "/aws/lambda/${ResourceNamePrefix}_parameters"
+        - ResourceNamePrefix: !Ref ResourceNamePrefix
+          SafeVersion: !Join [ "_", !Split [ ".", !Join [ "_", !Split [ "-", !FindInMap [Constants, Product, Version] ] ] ] ]
+      RetentionInDays: !Ref LogRetentionDays
+
+  TurbotParameters:
+    Type: AWS::Lambda::Function
+    DependsOn: TurbotParametersLogGroup
+    Properties:
+      FunctionName: !Sub "${ResourceNamePrefix}_parameters"
+      Runtime: nodejs14.x
+      Role: !If
+        - CreateTurbotParametersRole
+        - !GetAtt TurbotParametersRole.Arn
+        - !Ref TurbotParametersRoleArn
+      Handler: index.handler
+      MemorySize: 1024
+      Code:
+        S3Bucket: !Sub
+          - "turbot-software-${ReleasePhase}-${Region}"
+          - ReleasePhase: !Ref ReleasePhase
+            Region: !Ref "AWS::Region"
+        S3Key: !Sub
+          - "tef/${Version}/turbot-parameters.zip"
+          - Version: !FindInMap [Constants, Product, Version]
+      Description: Turbot TEF Parameter Roles Stack Lambda
+      Timeout: 60
+      VpcConfig:
+        SecurityGroupIds:
+          - !GetAtt OutboundInternetSecurityGroupParameter.Value
+        SubnetIds: !If
+          - HasPredefinedVpc
+          - !Ref PredefinedTurbotSubnetIds
+          -
+            - !Ref TurbotSubnet1
+            - !If [ HasTurbotSubnet2, !Ref TurbotSubnet2, !Ref "AWS::NoValue" ]
+            - !If [ HasTurbotSubnet3, !Ref TurbotSubnet3, !Ref "AWS::NoValue" ]
+      Environment:
+        Variables:
+          TURBOT_PREFIX: !Ref ResourceNamePrefix
+
+  TurbotParametersRole:
+    Type: AWS::IAM::Role
+    Condition: CreateTurbotParametersRole
+    Properties:
+      RoleName: !Sub
+        - "${ResourceNamePrefix}_parameters_role_${Region}"
+        - Region: !Join [ "_", !Split [ "-", !Ref "AWS::Region" ] ]
+      Path: /
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+            - sts:AssumeRole
+      Policies:
+        - PolicyName: AllowReadAccessForSSM
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Sid: SSMParameter
+                Effect: Allow
+                Action:
+                  - ssm:GetParameters
+                  - ssm:GetParameter
+                Resource: !Sub "arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/*"
+
+              - Sid: EC2Instance
+                Effect: Allow
+                Action:
+                  - ec2:DescribeNetworkInterfaces
+                  - ec2:CreateNetworkInterface
+                  - ec2:DeleteNetworkInterface
+                Resource: "*"
+
+              - Sid: LogsPolicy
+                Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${ResourceNamePrefix}_parameters:log-stream:*
+
+  TurbotSnsSqsPolicyParameterLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    Properties:
+      LogGroupName: !Sub
+        - "/aws/lambda/${ResourceNamePrefix}_policy_parameter"
+        - ResourceNamePrefix: !Ref ResourceNamePrefix
+          SafeVersion: !Join [ "_", !Split [ ".", !Join [ "_", !Split [ "-", !FindInMap [Constants, Product, Version] ] ] ] ]
+      RetentionInDays: !Ref LogRetentionDays
+
+  TurbotSnsSqsPolicyParameterLambda:
+    Type: AWS::Lambda::Function
+    DependsOn:
+      - TurbotSnsSqsPolicyParameterLogGroup
+      - TefIamParameters
+    Properties:
+      FunctionName: !Sub "${ResourceNamePrefix}_policy_parameter"
+      Runtime: nodejs14.x
+      Role: !GetAtt [TefIamParameters, sqs_sns_policy_parameter_role]
+      Handler: index.handler
+      MemorySize: 1024
+      Code:
+        S3Bucket: !Sub
+          - "turbot-software-${ReleasePhase}-${Region}"
+          - ReleasePhase: !Ref ReleasePhase
+            Region: !Ref "AWS::Region"
+        S3Key: !Sub
+          - "tef/${Version}/turbot-policy-parameters.zip"
+          - Version: !FindInMap [Constants, Product, Version]
+      Description: Turbot TEF Parameter Policy Parameter Lambda
+      Timeout: 60
+      VpcConfig:
+        SecurityGroupIds:
+          - !GetAtt OutboundInternetSecurityGroupParameter.Value
+        SubnetIds: !If
+          - HasPredefinedVpc
+          - !Ref PredefinedTurbotSubnetIds
+          -
+            - !Ref TurbotSubnet1
+            - !If [ HasTurbotSubnet2, !Ref TurbotSubnet2, !Ref "AWS::NoValue" ]
+            - !If [ HasTurbotSubnet3, !Ref TurbotSubnet3, !Ref "AWS::NoValue" ]
+      Environment:
+        Variables:
+          TURBOT_PREFIX: !Ref ResourceNamePrefix
+          AWS_ORGANIZATION_ID: !GetAtt [TefParameters, organization_id]
+
+  TefIamParameters:
+    Type: Custom::CustomResource
+    DependsOn:
+      - TurbotParameters
+      - IamParametersStack
+    Properties:
+      ServiceToken: !Sub "arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${ResourceNamePrefix}_parameters"
+      Version: !FindInMap [Constants, Product, Version]
+      CallingEntity: "TEF"
+      Parameters:
+        - ec2_role
+        - hive_manager_execution_role
+        - workspace_manager_execution_role
+        - event_proxy_execution_role
+        - health_check_proxy_execution_role
+        - connectivity_checker_role
+        - preinstall_checker_role
+        - ec2_instance_profile
+        - sqs_sns_policy_parameter_role
+      ParameterDeploymentTrigger: !Ref ParameterDeploymentTrigger
+
+  TefNetworkParameters:
+    Type: Custom::CustomResource
+    DependsOn:
+      - TurbotParameters
+      - NetworkParametersStack
+    Properties:
+      ServiceToken: !Sub "arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${ResourceNamePrefix}_parameters"
+      Version: !FindInMap [Constants, Product, Version]
+      CallingEntity: "TEF"
+      Parameters:
+        - cache_pair_security_group
+        - internal_services_security_group
+      ParameterDeploymentTrigger: !Ref ParameterDeploymentTrigger
+
+  TefParameters:
+    Type: Custom::CustomResource
+    DependsOn:
+      - TurbotParameters
+      - ParametersStack
+    Properties:
+      ServiceToken: !Sub "arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${ResourceNamePrefix}_parameters"
+      Version: !FindInMap [Constants, Product, Version]
+      CallingEntity: "TEF"
+      Parameters:
+        - organization_id
+      ParameterDeploymentTrigger: !Ref ParameterDeploymentTrigger
+
+  SqsSnsPolicyUpdate:
+    Type: Custom::CustomResource
+    DependsOn:
+      - TurbotSnsSqsPolicyParameterLambda
+    Properties:
+      ServiceToken: !Sub "arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${ResourceNamePrefix}_policy_parameter"
+      Version: !FindInMap [Constants, Product, Version]
+      CallingEntity: "TEF"
+      Queues:
+        - !Ref LambdaRunnableDeadLetterQueue
+        - !Ref RunnableDeadLetterQueue
+      ParameterDeploymentTrigger: !Ref ParameterDeploymentTrigger
+
+  S3BucketArnList:
+    Type: Custom::CustomResource
+    DependsOn:
+      - S3BucketArnLambda
+    Properties:
+      ServiceToken: !Sub "arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${ResourceNamePrefix}_s3_bucket_arns"
+      CallingEntity: "TEF"
+      Version: !FindInMap [Constants, Product, Version]
+      Parameters:
+        - { Bucket: "log,process-log" }
+        - { Bucket: "log,process-log", Resource: "temp/*" }
+      ParameterDeploymentTrigger: !Ref ParameterDeploymentTrigger
+
+  #
+  # SQS & SNS
+  #
+
+  TurbotAlarmsTopic:
+    Type: "AWS::SNS::Topic"
+    Properties:
+      TopicName: !Sub "${ResourceNamePrefix}_alarms"
+      KmsMasterKeyId: !Ref FoundationKeyAlias
+
+  LambdaRunnableDeadLetterQueueAlarm:
+    Type: "AWS::CloudWatch::Alarm"
+    DependsOn: LambdaRunnableDeadLetterQueue
+    Properties:
+      AlarmName: !Sub "${ResourceNamePrefix}_lambda_runnable_dead_letter_queue_alarm"
+      AlarmDescription: "Lambda Runnable Dead Letter Queue ApproximateAgeOfOldestMessage alarm"
+      Namespace: "AWS/SQS"
+      MetricName: ApproximateAgeOfOldestMessage
+      ComparisonOperator: "GreaterThanThreshold"
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt LambdaRunnableDeadLetterQueue.QueueName
+      EvaluationPeriods: 1
+      Period: 300
+      Statistic: "Average"
+      Threshold: 5000
+      AlarmActions:
+        - !Ref TurbotAlarmsTopic
+
+  RunnableDeadLetterQueueAlarm:
+    Type: "AWS::CloudWatch::Alarm"
+    DependsOn: RunnableDeadLetterQueue
+    Properties:
+      AlarmName: !Sub "${ResourceNamePrefix}_runnable_dead_letter_queue_alarm"
+      AlarmDescription: "Runnable Dead Letter Queue ApproximateAgeOfOldestMessage alarm"
+      Namespace: "AWS/SQS"
+      MetricName: ApproximateAgeOfOldestMessage
+      ComparisonOperator: "GreaterThanThreshold"
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt RunnableDeadLetterQueue.QueueName
+      EvaluationPeriods: 3
+      Period: 300
+      Statistic: "Average"
+      Threshold: 5000
+      AlarmActions:
+        - !Ref TurbotAlarmsTopic
+
+  Dashboard:
+    Type: AWS::CloudWatch::Dashboard
+    Properties:
+      DashboardName: !Sub
+        - "${ResourceNamePrefix}_tef_${Region}"
+        - Region: !Join [ "_", !Split [ "-", !Ref "AWS::Region" ] ]
+      DashboardBody: !Join
+        - ""
+        -
+          - |
+            { "widgets": [
+
+          - !Join
+            - ","
+            -
+
+              - !Sub
+                - |
+                  {
+                    "type": "text",
+                    "x": 0,
+                    "y": 0,
+                    "width": 24,
+                    "height": 2,
+                    "properties": {
+                      "markdown": "# ECS Cluster [${AWS::Region}]"
+                    }
+                  }
+                - {}
+
+              - !Sub
+                - |
+                  {
+                    "type": "metric",
+                    "x": 0,
+                    "y": 2,
+                    "width": 15,
+                    "height": 6,
+                    "properties": {
+                      "metrics": [
+                        [ "AWS/ECS", "MemoryUtilization", "ClusterName", "${ResourceNamePrefix}" ],
+                        [ "AWS/ECS", "CPUUtilization", "ClusterName", "${ResourceNamePrefix}" ]
+                      ],
+                      "view": "timeSeries",
+                      "stacked": false,
+                      "region": "${AWS::Region}",
+                      "title": "ECS Cluster CPU & Memory Utilization %",
+                      "period": 300,
+                      "yAxis": {
+                        "left": {
+                          "min": 0
+                        }
+                      }
+                    }
+                  }
+                - {}
+
+              - !Sub
+                - |
+                  {
+                    "type": "text",
+                    "x": 15,
+                    "y": 2,
+                    "width": 9,
+                    "height": 6,
+                    "properties": {
+                      "markdown": "**Cluster CPU utilization:** measured as the total CPU units in use by Amazon ECS tasks on the cluster, divided by the total CPU units that were registered for all of the container instances in the cluster. Only container instances in ACTIVE or DRAINING status will affect CPU utilization metrics. Cluster CPU utilization metrics are only used for tasks using the EC2 launch type.\n\n**Cluster memory utilization:** measured as the total memory in use by Amazon ECS tasks on the cluster, divided by the total amount of memory that was registered for all of the container instances in the cluster. Only container instances in ACTIVE or DRAINING status will affect memory utilization metrics. Cluster memory utilization metrics are only used for tasks using the EC2 launch type."
+                    }
+                  }
+                - {}
+
+          - |
+            ] }
+
+Outputs:
+
+  ReleaseVersion:
+    Description: Version of the Release
+    Value: !FindInMap [Constants, Product, Version]
+
+  TurbotVpc:
+    Description: Turbot VPC
+    Value: !If
+      - HasPredefinedVpc
+      - !Ref PredefinedVpcId
+      - !Ref TurbotVpc
+    Export:
+      Name: !Sub "${ResourceNamePrefix}-vpc"
+
+  InstallationDomain:
+    Description: |
+      Base domain name for the installation. For example,
+      cloud.turbot.com. Workspaces will be setup as subdomains of the
+      InstallationDomain in the formation
+      <workspace>-<identity>.<InstallationDomain>. For example,
+      ws-acme.cloud.turbot.com.
+    Value: !Ref InstallationDomain
+    Export:
+      Name: !Sub "${ResourceNamePrefix}-installation-domain"
+
+  Regions:
+    Description: |
+      Comma separated list of the regions where Turbot is operating.
+    Value: !Join
+      - ","
+      -
+        - !If [ HasAlpha, !Ref VpcAlphaRegion, !Ref "AWS::NoValue" ]
+        - !If [ HasBeta,  !Ref VpcBetaRegion,  !Ref "AWS::NoValue" ]
+        - !If [ HasGamma, !Ref VpcGammaRegion, !Ref "AWS::NoValue" ]
+    Export:
+      Name: !Sub "${ResourceNamePrefix}-regions"
+
+  DatabaseSubnetGroup:
+    Description: Database Subnet Group
+    Value: !Ref TurbotDbSubnetGroup
+    Export:
+      Name: !Sub "${ResourceNamePrefix}-db-subnet-group"
+
+  DatabaseSecurityGroup:
+    Description: Database Pair Security Group
+    Value: !Ref DbPairSecurityGroup
+    Export:
+      Name: !Sub "${ResourceNamePrefix}-db-security-group"
+
+  TurbotVpcPeeringConnectionAlphaToBeta:
+    Description: Peering Connection from "alpha" VPC to "beta" VPC. Setup by the "alpha" region, used as a parameter in the "beta" region.
+    Condition: PeerAlphaToBeta
+    Value: !Ref VpcPeeringAlphaToBeta
+
+  TurbotVpcPeeringConnectionAlphaToGamma:
+    Description: Peering Connection from "alpha" VPC to "gamma" VPC. Setup by the "alpha" region, used as a parameter in the "gamma" region.
+    Condition: PeerAlphaToGamma
+    Value: !Ref VpcPeeringAlphaToGamma
+
+  TurbotVpcPeeringConnectionBetaToGamma:
+    Description: Peering Connection from "beta" VPC to "gamma" VPC. Setup by the "beta" region, used as a parameter in the "gamma" region.
+    Condition: PeerBetaToGamma
+    Value: !Ref VpcPeeringBetaToGamma
+
+  HttpProxyParameter:
+    Description: |
+      Name of the SSM Parameter with HTTP_PROXY configuration for use by the Turbot application.
+    Value: !Ref HttpProxyParameter
+
+  HttpsProxyParameter:
+    Description: |
+      Name of the SSM Parameter with HTTPS_PROXY configuration for use by the Turbot application.
+    Value: !Ref HttpsProxyParameter
+
+  NoProxyParameter:
+    Description: |
+      Name of the SSM Parameter with NO_PROXY configuration for use by the Turbot application.
+    Value: !Ref NoProxyParameter
+
+  ApiGatewayEventsRegionalURL:
+    Condition: ApiGatewayEnabled
+    Value: !Sub "https://${ApiGatewayRestApi}.execute-api.${AWS::Region}.amazonaws.com/${ResourceNamePrefix}/api/v5/events/raw"
+
+  ApiGatewayEventsURL:
+    Condition: ApiGatewayEnabled
+    Value: !Sub "https://gateway.${InstallationDomain}/api/v5/events/raw"
+
+  ApiGatewayHealthcheckURL:
+    Condition: ApiGatewayEnabled
+    Value: !Sub "https://${ApiGatewayRestApi}.execute-api.${AWS::Region}.amazonaws.com/${ResourceNamePrefix}/api/v5/turbot/health"
+
+  ApiGatewayRegionalDomainName:
+    Condition: ApiGatewayEnabled
+    Value: !GetAtt ApiCustomDomainName.RegionalDomainName
